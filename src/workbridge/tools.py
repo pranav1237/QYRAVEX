@@ -4,7 +4,8 @@ from __future__ import annotations
 import hashlib
 import math
 import time
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from .memory import MemoryStore
 from .models import Evidence, ToolResult
