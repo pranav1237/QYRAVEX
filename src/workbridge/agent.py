@@ -16,33 +16,57 @@ class Planner:
     """Deterministic planner: transparent and reliable without requiring an LLM key."""
     def build(self, question: str, max_steps: int = 12) -> ResearchPlan:
         tickers = list(dict.fromkeys(re.findall(r"\b[A-Z]{1,5}\b", question)))
-        tickers = [t for t in tickers if t not in {"THE", "AND", "FOR", "WITH", "FROM", "WHAT", "HOW", "SEC", "USD"}]
+        excluded = {"THE", "AND", "FOR", "WITH", "FROM", "WHAT", "HOW", "SEC", "USD"}
+        tickers = [ticker for ticker in tickers if ticker not in excluded]
         steps: list[PlanStep] = []
-        def add(objective: str, tool: str, args: dict[str, Any], rationale: str, required: bool = False) -> None:
+        def add(
+            objective: str,
+            tool: str,
+            args: dict[str, Any],
+            rationale: str,
+            required: bool = False,
+        ) -> None:
             if len(steps) < max_steps:
                 steps.append(PlanStep(id=len(steps)+1, objective=objective, tool=tool, args=args,
                                       rationale=rationale, required=required))
-        add("Inspect provider availability", "source_health", {}, "Identify configured data sources.")
+        add(
+            "Inspect provider availability",
+            "source_health",
+            {},
+            "Identify configured data sources.",
+        )
         add("Retrieve relevant prior evidence", "memory_search", {"query": question},
             "Reuse durable, provenance-bearing research when relevant.")
         for ticker in tickers[:3]:
             add(f"Resolve {ticker} to a legal entity and SEC CIK", "resolve_ticker",
                 {"ticker": ticker}, "Map symbol to authoritative SEC registrant.")
             add(f"Retrieve reported financial statement facts for {ticker}", "financial_snapshot",
-                {"cik": "__RESOLVED__"}, "Use SEC XBRL facts rather than inferred fundamentals.", True)
+                {"cik": "__RESOLVED__"},
+                "Use SEC XBRL facts rather than inferred fundamentals.",
+                True,
+            )
             add(f"Retrieve recent filings for {ticker}", "sec_filings",
                 {"cik": "__RESOLVED__"}, "Identify current 10-K/10-Q and filing dates.")
             add(f"Retrieve market price history for {ticker}", "technical_summary",
-                {"symbol": ticker, "period": "1y"}, "Provide dated market context, not intrinsic value.")
-        if any(word in question.lower() for word in ("inflation", "rates", "macro", "economy", "gdp")):
-            add("Retrieve macroeconomic context", "macro_series", {"series_id": "CPIAUCSL", "limit": 18},
+                {"symbol": ticker, "period": "1y"},
+                "Provide dated market context, not intrinsic value.",
+            )
+        macro_terms = ("inflation", "rates", "macro", "economy", "gdp")
+        if any(word in question.lower() for word in macro_terms):
+            add(
+                "Retrieve macroeconomic context",
+                "macro_series",
+                {"series_id": "CPIAUCSL", "limit": 18},
                 "Use public FRED observations; series choice is a proxy.")
         add("Search recent news context", "news_search", {"query": question, "page_size": 8},
             "Optional provider; disclose when unavailable.")
         return ResearchPlan(question=question, steps=steps,
             assumptions=["Ticker extraction is heuristic; validate the intended issuer.",
-                         "Optional provider keys may be absent; core SEC and market tools remain usable."],
-            success_criteria=["Use primary sources where available.", "Retain source and retrieval provenance.",
+                         "Optional provider keys may be absent; core SEC and market "
+                         "tools remain usable."],
+            success_criteria=[
+                "Use primary sources where available.",
+                "Retain source and retrieval provenance.",
                               "Disclose missing data, conflicts, and provider outages."])
 
 class ResearchAgent:
@@ -88,5 +112,9 @@ class ResearchAgent:
                 self.memory.remember_evidence(result.evidence)
         self.metrics.set("report_latency_seconds", time.perf_counter() - start)
         self.metrics.inc("provider_degradations", sum(
-            1 for x in observations if not x.success and x.tool in {"company_profile", "news_search", "macro_series"}))
+            1
+            for x in observations
+            if not x.success
+            and x.tool in {"company_profile", "news_search", "macro_series"}
+        ))
         return {"plan": plan, "observations": observations, "metrics": self.metrics.snapshot()}
