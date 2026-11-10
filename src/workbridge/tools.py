@@ -2,15 +2,12 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import math
-import re
 import time
-from datetime import datetime, timezone
 from typing import Any, Callable
 
 from .memory import MemoryStore
-from .models import Evidence, EvidenceKind, ToolResult
+from .models import Evidence, ToolResult
 from .providers import MacroProvider, MarketProvider, NewsProvider, ProviderError, SecProvider
 
 ToolFn = Callable[..., ToolResult]
