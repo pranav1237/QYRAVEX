@@ -1,12 +1,16 @@
 """Bounded plan-and-execute agent with ReAct-style observations and fallbacks."""
+
 from __future__ import annotations
+
 import re
 import time
 from typing import Any
+
 from .memory import MemoryStore
 from .models import PlanStep, ResearchPlan, ToolResult
 from .observability import Metrics
 from .tools import ToolRegistry
+
 
 class Planner:
     """Deterministic planner: transparent and reliable without requiring an LLM key."""
