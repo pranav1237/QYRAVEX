@@ -14,7 +14,7 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 cp .env.example .env
 pytest
-workbridge "Compare Microsoft and Alphabet's latest reported revenue growth, margins, and balance-sheet risks"
+workbridge research "Compare Microsoft and Alphabet's latest reported revenue growth, margins, and balance-sheet risks"
 ```
 
 The core SEC tools work without API keys. Optional providers are enabled by environment variables; missing credentials are reported as unavailable capabilities rather than silently fabricated.
@@ -40,8 +40,8 @@ See [.env.example](.env.example). Provider keys are optional. SEC requests ident
 ## CLI
 
 ```bash
-workbridge "Research NVDA: business, latest financials, valuation context, risks" --format markdown
-workbridge "..." --format json --max-steps 16
+workbridge research "Research NVDA: business, latest financials, valuation context, risks" --format markdown
+workbridge research "..." --format json --max-steps 16
 workbridge benchmark --all
 workbridge metrics --db ./data/workbridge.sqlite
 ```
