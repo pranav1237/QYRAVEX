@@ -56,7 +56,7 @@ def benchmark(
 
 @app.command()
 def metrics(
-    db: Path = typer.Option(settings.db_path, help="SQLite database path"),
+    db: Annotated[Path, typer.Option(help="SQLite database path")] = settings.db_path,
 ) -> None:
     """Show durable memory row counts."""
     store = MemoryStore(db)
