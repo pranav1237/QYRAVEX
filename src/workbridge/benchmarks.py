@@ -1,7 +1,9 @@
 """Eight progressive, offline benchmarks for core agent reliability."""
 from __future__ import annotations
+
 from pathlib import Path
 from tempfile import TemporaryDirectory
+
 from .memory import MemoryStore
 from .models import Evidence, ToolResult
 from .synthesis import detect_conflicts, synthesize
@@ -17,21 +19,51 @@ CHALLENGES = [
     ("C8", "No invented output", "Empty evidence produces no sourced factual claims"),
 ]
 
+
 def run_challenges() -> list[dict[str, object]]:
-    e1 = Evidence(id="a", statement="Revenue reported as 100", value=100, source="SEC",
-                  entity="Example", confidence=.9, unit="USD")
-    e2 = Evidence(id="b", statement="Revenue reported as 120", value=120, source="Annual report",
-                  entity="Example", confidence=.8, unit="USD")
+    e1 = Evidence(
+        id="a",
+        statement="Revenue reported as 100",
+        value=100,
+        source="SEC",
+        entity="Example",
+        confidence=.9,
+        unit="USD",
+    )
+    e2 = Evidence(
+        id="b",
+        statement="Revenue reported as 120",
+        value=120,
+        source="Annual report",
+        entity="Example",
+        confidence=.8,
+        unit="USD",
+    )
     with TemporaryDirectory() as tmp:
         store = MemoryStore(Path(tmp) / "bench.sqlite")
         store.remember_evidence([e1])
         store.remember_evidence([e1])
-        deduplicated = store.db.execute("SELECT COUNT(*) FROM facts").fetchone()[0] == 1
+        deduplicated = (
+            store.db.execute("SELECT COUNT(*) FROM facts").fetchone()[0] == 1
+        )
         store.close()
-    checks = [bool(e1.source and e1.id), len(detect_conflicts([e1, e2])) == 1,
+    checks = [
+        bool(e1.source and e1.id),
+        len(detect_conflicts([e1, e2])) == 1,
         0 <= e1.confidence <= 1,
-        bool(synthesize("test", [ToolResult(tool="news_search", success=False, error="offline")], {}).limitations),
-        all(x.source for x in [e1, e2]), e1.unit == "USD", deduplicated,
-        not synthesize("test", [], {}).evidence]
-    return [{"id": cid, "title": title, "passed": bool(ok), "description": desc}
-            for (cid, title, desc), ok in zip(CHALLENGES, checks)]
+        bool(
+            synthesize(
+                "test",
+                [ToolResult(tool="news_search", success=False, error="offline")],
+                {},
+            ).limitations
+        ),
+        all(x.source for x in [e1, e2]),
+        e1.unit == "USD",
+        deduplicated,
+        not synthesize("test", [], {}).evidence,
+    ]
+    return [
+        {"id": cid, "title": title, "passed": bool(ok), "description": desc}
+        for (cid, title, desc), ok in zip(CHALLENGES, checks, strict=True)
+    ]
