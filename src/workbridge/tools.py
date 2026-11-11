@@ -140,9 +140,21 @@ class ToolRegistry:
                    for i in range(min(len(timestamps), len(quote.get("close", []))))
                    if quote["close"][i] is not None]
         provider = row.get("meta", {}).get("dataProvider", "Yahoo Finance")
-        ev = _evidence("price_history", f"Retrieved {len(records)} daily closes for {symbol.upper()} from {provider}",
-                       records[-5:], provider + " daily price history",
-                       f"https://finance.yahoo.com/quote/{symbol.upper()}" if provider == "Yahoo Finance" else f"https://stooq.com/q/?s={symbol.lower()}.us", symbol.upper(), period, row.get("meta", {}).get("currency", "USD"))
+        source_url = (
+            f"https://finance.yahoo.com/quote/{symbol.upper()}"
+            if provider == "Yahoo Finance"
+            else f"https://stooq.com/q/?s={symbol.lower()}.us"
+        )
+        ev = _evidence(
+            "price_history",
+            f"Retrieved {len(records)} daily closes for {symbol.upper()} from {provider}",
+            records[-5:],
+            provider + " daily price history",
+            source_url,
+            symbol.upper(),
+            period,
+            row.get("meta", {}).get("currency", "USD"),
+        )
         return ToolResult(tool="price_history", success=True, data={"symbol": symbol.upper(),
                           "currency": row.get("meta", {}).get("currency"),
                           "provider": row.get("meta", {}).get("dataProvider", "Yahoo Finance"),
