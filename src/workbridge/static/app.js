@@ -64,7 +64,9 @@ function renderReport(data) {
   const evidence = report.evidence || [];
   $("#results").classList.remove("hidden");
   $("#result-title").textContent = report.question || "Research report";
-  const failedSteps = (data.observations || []).filter(item => !item.success).length;\n  $("#result-state").textContent = !evidence.length ? "NO EVIDENCE · REVIEW" : failedSteps ? "PARTIAL · REVIEW GAPS" : "COMPLETE · EVIDENCE COLLECTED";\n  $("#result-state").className = `result-state ${!evidence.length || failedSteps ? "degraded" : "complete"}`;
+  const failedSteps = (data.observations || []).filter(item => !item.success).length;
+  $("#result-state").textContent = !evidence.length ? "NO EVIDENCE · REVIEW" : failedSteps ? "PARTIAL · REVIEW GAPS" : "COMPLETE · EVIDENCE COLLECTED";
+  $("#result-state").className = `result-state ${!evidence.length || failedSteps ? "degraded" : "complete"}`;
   const reportMetrics = report.metrics || {};\n  renderMetrics({...data.metrics, ...reportMetrics, tool_calls: data.metrics?.tool_calls || 0}, evidence);
   $("#summary-text").textContent = report.executive_summary || "The run did not return an executive summary.";
   const limitations = report.limitations || [];
