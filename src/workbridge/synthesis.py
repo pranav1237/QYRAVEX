@@ -68,10 +68,25 @@ def synthesize(
                 )
                 + "."
             )
-        elif result.tool == "news_search" and result.data:
+        elif result.tool == "news_search":
+            articles = result.data or []
+            if articles:
+                headlines = [
+                    f"{item.get('title', 'Untitled')} ({item.get('source', {}).get('name', 'publisher')})"
+                    for item in articles[:3]
+                ]
+                findings.append(
+                    f"Recent news context from GDELT: {'; '.join(headlines)}. "
+                    "Headlines are leads for review, not independently verified facts."
+                )
+            else:
+                limitations.append("GDELT returned no recent matching news articles for this query.")
+        elif result.tool == "macro_series" and result.data:
+            latest = result.data[-1]
             findings.append(
-                f"News search returned {len(result.data)} articles; "
-                "headlines are context, not verified facts."
+                f"Latest FRED observation for the requested series: "
+                f"{latest.get('value')} on {latest.get('date')}. "
+                "Check the series definition and release cadence before interpreting it."
             )
         elif result.tool == "source_health" and result.data:
             unavailable = [key for key, available in result.data.items() if not available]
