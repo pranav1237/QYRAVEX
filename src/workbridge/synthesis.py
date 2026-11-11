@@ -49,7 +49,8 @@ def synthesize(
             for metric, item in result.data.items():
                 findings.append(
                     f"{metric.replace('_', ' ').title()}: {item['value']} {item['unit']} "
-                    f"(period ending {item['period_end']}; filed {item['filed']}; SEC XBRL)."
+                    f"(period ending {item.get('period_end', 'not stated')}; "
+                    f"filed {item.get('filed', 'not stated')}; SEC XBRL)."
                 )
         elif result.tool == "technical_summary" and result.data:
             data = result.data
