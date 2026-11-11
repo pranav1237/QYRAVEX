@@ -37,9 +37,9 @@ async function loadStatus() {
     $("#system-status").textContent = data.status === "online" ? "Core services online" : "Service degraded";
     const providers = data.providers || {};
     const active = Object.values(providers).filter(Boolean).length;
-    $("#provider-count").textContent = `${active} of ${Object.keys(providers).length} sources available`;
+    $("#provider-count").textContent = `${active} public data sources supported`;
     $("#provider-list").innerHTML = Object.entries(providers).map(([name, enabled]) =>
-      `<div class="provider-row"><span>${escapeHtml(name.replaceAll("_"," ").toUpperCase())}</span><i class="${enabled ? "available" : "off"}">${enabled ? "Available" : "Not configured"}</i></div>`
+      `<div class="provider-row"><span>${escapeHtml(name.replaceAll("_"," ").toUpperCase())}</span><i class="${enabled ? "available" : "off"}">${enabled ? "Public endpoint" : "Unavailable"}</i></div>`
     ).join("");
   } catch (error) {
     $("#system-status").textContent = "API unavailable";
@@ -99,7 +99,7 @@ function renderReport(data) {
   }).join("") : '<div class="empty-state">No execution steps were returned.</div>';
   $("#evidence-count").textContent = `${evidence.length} items`;
   $("#evidence-list").innerHTML = evidence.length ? evidence.map(item =>
-    `<div class="evidence-item"><div><strong>${escapeHtml(item.statement)}</strong><p>${escapeHtml(item.entity || "Entity not specified")} · ${escapeHtml(item.period || "Period not specified")} · Confidence ${Math.round((item.confidence || 0)*100)}%</p>${item.source_url ? `<a href="${escapeHtml(item.source_url)}" target="_blank" rel="noopener">Open source ↗</a>` : ""}</div><span class="source-pill">${escapeHtml(item.source)}</span></div>`
+    `<div class="evidence-item"><div><strong>${escapeHtml(item.statement)}</strong><p>${escapeHtml(item.entity || "Entity not specified")} · ${escapeHtml(item.period || "Period not specified")} · Retrieved ${item.retrieved_at ? new Date(item.retrieved_at).toLocaleString() : "time unavailable"} · Confidence ${Math.round((item.confidence || 0)*100)}%</p>${item.source_url ? `<a href="${escapeHtml(item.source_url)}" target="_blank" rel="noopener">Open source ↗</a>` : ""}</div><span class="source-pill">${escapeHtml(item.source)}</span></div>`
   ).join("") : '<div class="empty-state">No source-backed evidence was collected in this run. Review limitations and provider availability above.</div>';
   const findings = report.findings || [];
   $("#findings-list").innerHTML = findings.map(item => `<div class="finding">${escapeHtml(item)}</div>`).join("") || '<div class="empty-state">No findings available.</div>';
