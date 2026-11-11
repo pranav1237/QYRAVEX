@@ -46,7 +46,8 @@ def test_partial_report_discloses_failure():
         {},
     )
     assert report.limitations
-    assert report.evidence == []\n    assert "did not return enough validated data" in report.executive_summary
+    assert report.evidence == []
+    assert "did not return enough validated data" in report.executive_summary
 
 
 def test_challenge_suite():
