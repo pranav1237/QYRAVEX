@@ -12,6 +12,8 @@ def test_planner_is_bounded_and_transparent():
     assert len(plan.steps) <= 5
     assert plan.steps[0].tool == "source_health"
     assert plan.assumptions
+    named_company_plan = Planner().build("Research Microsoft financial performance")
+    assert any(step.tool == "resolve_ticker" and step.args["ticker"] == "MSFT" for step in named_company_plan.steps)
 
 
 def test_conflicts_are_not_silently_averaged():
