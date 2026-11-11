@@ -223,7 +223,6 @@ class ToolRegistry:
         return ToolResult(tool="compare_entities", success=True, data=grouped)
 
     def source_health(self) -> ToolResult:
-        from .config import settings
         data = {"sec_edgar": True, "market_data_yahoo_stooq": True,
                 "fred_public_data": True, "gdelt_public_news": True}
         return ToolResult(tool="source_health", success=True, data=data)
