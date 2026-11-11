@@ -68,9 +68,15 @@ function renderReport(data) {
   const reportMetrics = report.metrics || {};\n  renderMetrics({...data.metrics, ...reportMetrics, tool_calls: data.metrics?.tool_calls || 0}, evidence);
   $("#summary-text").textContent = report.executive_summary || "The run did not return an executive summary.";
   const limitations = report.limitations || [];
-  $("#limitations").innerHTML = limitations.length ? limitations.map(item =>
-    `<div class="limitation">${escapeHtml(item)}</div>`
-  ).join("") : '<div class="provider-note">No provider or parsing failures were recorded.</div>';
+  $("#limitations").innerHTML = limitations.length ? limitations.map(item => {
+    const raw = String(item);
+    const friendly = raw.includes("429") ? "Market data provider is temporarily rate limiting requests. Retry later; SEC filings and reported financials may still be available."
+      : raw.includes("API_KEY") || raw.includes("not configured") ? "An optional data source is not configured. Add its API key to enable this enrichment."
+      : raw.startsWith("Optional sources not configured:") ? raw
+      : raw.length > 190 ? raw.slice(0, 187) + "…"
+      : raw;
+    return `<details class="limitation"><summary>${escapeHtml(friendly)}</summary><p class="limitation-detail">${escapeHtml(raw)}</p></details>`;
+  }).join("") : '<div class="provider-note">No provider or parsing failures were recorded.</div>';
   const observations = data.observations || [];
   $("#execution-list").innerHTML = observations.length ? observations.map(item => {
     const rawError = String(item.error || "");
