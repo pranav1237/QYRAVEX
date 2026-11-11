@@ -34,7 +34,7 @@ $$(".hint").forEach(button => button.addEventListener("click", () => { $("#quest
 async function loadStatus() {
   try {
     const data = await api("/api/status");
-    $("#system-status").textContent = "All systems operational";
+    $("#system-status").textContent = data.status === "online" ? "Core services online" : "Service degraded";
     const providers = data.providers || {};
     const active = Object.values(providers).filter(Boolean).length;
     $("#provider-count").textContent = `${active} of ${Object.keys(providers).length} sources available`;
@@ -64,17 +64,30 @@ function renderReport(data) {
   const evidence = report.evidence || [];
   $("#results").classList.remove("hidden");
   $("#result-title").textContent = report.question || "Research report";
-  $("#result-state").textContent = evidence.length ? "EVIDENCE COLLECTED" : "PARTIAL · NO EVIDENCE";
-  renderMetrics(data.metrics || {}, evidence);
-  $("#summary-text").textContent = report.executive_summary || "No summary returned.";
+  const failedSteps = (data.observations || []).filter(item => !item.success).length;\n  $("#result-state").textContent = !evidence.length ? "NO EVIDENCE · REVIEW" : failedSteps ? "PARTIAL · REVIEW GAPS" : "COMPLETE · EVIDENCE COLLECTED";\n  $("#result-state").className = `result-state ${!evidence.length || failedSteps ? "degraded" : "complete"}`;
+  const reportMetrics = report.metrics || {};\n  renderMetrics({...data.metrics, ...reportMetrics, tool_calls: data.metrics?.tool_calls || 0}, evidence);
+  $("#summary-text").textContent = report.executive_summary || "The run did not return an executive summary.";
   const limitations = report.limitations || [];
   $("#limitations").innerHTML = limitations.length ? limitations.map(item =>
     `<div class="limitation">${escapeHtml(item)}</div>`
   ).join("") : '<div class="provider-note">No provider or parsing failures were recorded.</div>';
   const observations = data.observations || [];
-  $("#execution-list").innerHTML = observations.length ? observations.map(item =>
-    `<div class="execution-item"><span class="execution-mark ${item.success ? "" : "fail"}">${item.success ? "✓" : "!"}</span><span>${escapeHtml(item.tool.replaceAll("_"," "))}<small> · ${escapeHtml(item.error || "Completed")}</small></span><small>${Number(item.latency_ms || 0).toFixed(0)} ms</small></div>`
-  ).join("") : '<div class="empty-state">No execution steps were returned.</div>';
+  $("#execution-list").innerHTML = observations.length ? observations.map(item => {
+    const rawError = String(item.error || "");
+    const shortError = rawError.includes("429") ? "Rate limited by market-data provider"
+      : rawError.includes("API_KEY") ? "API key missing"
+      : rawError.includes("not configured") ? "Provider not configured"
+      : rawError.includes("Skipped:") ? "Skipped · prerequisite unavailable"
+      : rawError ? rawError.split(/[\\n:]/).slice(0, 2).join(": ").slice(0, 90)
+      : item.cached ? "Retrieved from local memory" : "Completed successfully";
+    const latency = Number(item.latency_ms || 0);
+    return `<details class="execution-item ${item.success ? "success" : "failure"}">
+      <summary><span class="execution-mark ${item.success ? "" : "fail"}">${item.success ? "✓" : "!"}</span>
+      <span class="execution-copy"><b>${escapeHtml(item.tool.replaceAll("_"," "))}</b><small>${escapeHtml(shortError)}</small></span>
+      <small class="execution-time">${latency < 1000 ? `${latency.toFixed(0)} ms` : `${(latency/1000).toFixed(1)} s`}</small></summary>
+      ${rawError ? `<p class="execution-detail">${escapeHtml(rawError)}</p>` : item.warnings?.length ? `<p class="execution-detail">${escapeHtml(item.warnings.join("; "))}</p>` : ""}
+    </details>`;
+  }).join("") : '<div class="empty-state">No execution steps were returned.</div>';
   $("#evidence-count").textContent = `${evidence.length} items`;
   $("#evidence-list").innerHTML = evidence.length ? evidence.map(item =>
     `<div class="evidence-item"><div><strong>${escapeHtml(item.statement)}</strong><p>${escapeHtml(item.entity || "Entity not specified")} · ${escapeHtml(item.period || "Period not specified")} · Confidence ${Math.round((item.confidence || 0)*100)}%</p>${item.source_url ? `<a href="${escapeHtml(item.source_url)}" target="_blank" rel="noopener">Open source ↗</a>` : ""}</div><span class="source-pill">${escapeHtml(item.source)}</span></div>`
