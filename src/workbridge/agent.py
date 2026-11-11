@@ -15,7 +15,23 @@ from .tools import ToolRegistry
 class Planner:
     """Deterministic planner: transparent and reliable without requiring an LLM key."""
     def build(self, question: str, max_steps: int = 12) -> ResearchPlan:
-        tickers = list(dict.fromkeys(re.findall(r"\b[A-Z]{1,5}\b", question)))
+        aliases = {
+            "MICROSOFT": "MSFT",
+            "APPLE": "AAPL",
+            "ALPHABET": "GOOGL",
+            "GOOGLE": "GOOGL",
+            "NVIDIA": "NVDA",
+            "AMAZON": "AMZN",
+            "FACEBOOK": "META",
+            "TESLA": "TSLA",
+        }
+        upper_question = question.upper()
+        named_tickers = [
+            symbol for name, symbol in aliases.items() if name in upper_question
+        ]
+        tickers = list(dict.fromkeys(
+            named_tickers + re.findall(r"\b[A-Z]{1,5}\b", question)
+        ))
         excluded = {"THE", "AND", "FOR", "WITH", "FROM", "WHAT", "HOW", "SEC", "USD"}
         tickers = [ticker for ticker in tickers if ticker not in excluded]
         steps: list[PlanStep] = []
