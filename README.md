@@ -29,6 +29,19 @@ The core SEC tools work without API keys. Optional providers are enabled by envi
 - Synthesizes a report that separates sourced facts, calculations, interpretations, and unknowns.
 - Exposes 25+ operational/research quality metrics and eight progressive benchmark challenges.
 
+## Browser dashboard
+
+A browser dashboard is included. Install the updated dependencies and launch it with:
+
+```bash
+pip install -e ".[dev]"
+workbridge-web
+```
+
+Open `http://localhost:8000` (or open forwarded port 8000 in GitHub Codespaces). The dashboard provides a research form, execution trace, evidence register, provider status, saved run history, and the offline benchmark suite. The API is also documented at `/docs`.
+
+In Codespaces, use the **Ports** panel to open port `8000` in your browser. No separate Node.js frontend build is required.
+
 ## Architecture
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/TOOLS.md](docs/TOOLS.md), [docs/METRICS.md](docs/METRICS.md), and [docs/CHALLENGES.md](docs/CHALLENGES.md).
