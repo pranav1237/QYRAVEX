@@ -15,6 +15,7 @@ from .benchmarks import run_challenges
 from .config import settings
 from .memory import MemoryStore
 from .synthesis import synthesize
+from .tools import ToolRegistry
 
 STATIC_DIR = Path(__file__).parent / "static"
 
@@ -34,8 +35,6 @@ class ResearchRequest(BaseModel):
 def status() -> dict[str, Any]:
     memory = MemoryStore(settings.db_path)
     try:
-        from .tools import ToolRegistry
-
         registry = ToolRegistry(memory)
         health = registry.execute("source_health", {})
         return {
@@ -65,9 +64,7 @@ def research(request: ResearchRequest) -> dict[str, Any]:
         raise HTTPException(status_code=422, detail="Enter a research question.")
     memory = MemoryStore(settings.db_path)
     try:
-        agent = ResearchAgent(__import__(
-            "workbridge.tools", fromlist=["ToolRegistry"]
-        ).ToolRegistry(memory), memory, request.max_steps)
+        agent = ResearchAgent(ToolRegistry(memory), memory, request.max_steps)
         run = agent.research(question)
         report = synthesize(question, run["observations"], run["metrics"])
         memory.remember_episode(question, report.executive_summary)
