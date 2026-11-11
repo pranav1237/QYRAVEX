@@ -112,10 +112,74 @@ def synthesize(
             "unsupported_claims": 0.0,
         }
     )
-    summary = (
-        f"Collected {len(evidence)} evidence items from {unique_sources} distinct sources. "
-        f"{len(findings)} findings assembled; {len(conflicts)} potential conflict(s) need review. "
-        "Read limitations before relying on this analysis."
+    # Build a concise, evidence-led executive brief instead of a generic run receipt.
+    issuer = next(
+        (str(result.data.get("name")) for result in observations
+         if result.tool == "resolve_ticker" and result.success and result.data),
+        None,
+    )
+    snapshot = next(
+        (result.data for result in observations
+         if result.tool == "financial_snapshot" and result.success and result.data),
+        {},
+    )
+    technical = next(
+        (result.data for result in observations
+         if result.tool == "technical_summary" and result.success and result.data),
+        None,
+    )
+    brief: list[str] = []
+    if issuer:
+        brief.append(f"Coverage: {issuer}.")
+    financial_parts = []
+    for key, label in (
+        ("revenue", "revenue"), ("operating_income", "operating income"),
+        ("net_income", "net income"), ("total_assets", "total assets"),
+        ("total_liabilities", "total liabilities"),
+    ):
+        item = snapshot.get(key)
+        if item and item.get("value") is not None:
+            value = item["value"]
+            unit = item.get("unit", "")
+            if isinstance(value, (int, float)):
+                rendered = f"{value:,.0f}"
+            else:
+                rendered = str(value)
+            financial_parts.append(f"{label} {rendered} {unit} (period ending {item.get('period_end', 'not stated')})")
+    if financial_parts:
+        brief.append("Latest reported financials: " + "; ".join(financial_parts) + ".")
+    revenue = snapshot.get("revenue", {})
+    net_income = snapshot.get("net_income", {})
+    if (
+        revenue.get("value") not in (None, 0)
+        and net_income.get("value") is not None
+        and revenue.get("period_end") == net_income.get("period_end")
+    ):
+        margin = net_income["value"] / revenue["value"]
+        brief.append(f"Net margin, calculated from same-period reported values: {margin:.1%}.")
+    if technical:
+        direction = "positive" if technical.get("period_return", 0) > 0 else "negative"
+        brief.append(
+            f"One-year market context: {direction} price return of "
+            f"{technical.get('period_return', 0):.1%}; annualized historical volatility "
+            f"{technical.get('annualized_volatility', 0):.1%}; maximum drawdown "
+            f"{technical.get('max_drawdown', 0):.1%}. Historical observations, not a forecast."
+        )
+    filing_result = next(
+        (result for result in observations if result.tool == "sec_filings" and result.success),
+        None,
+    )
+    if filing_result:
+        brief.append(f"Filing coverage: {len(filing_result.data or [])} recent SEC filing records retrieved.")
+    brief.append(
+        f"Evidence quality: {len(evidence)} records across {unique_sources} distinct source(s); "
+        f"{len(conflicts)} potential conflict(s) detected."
+    )
+    if limitations:
+        brief.append(f"Coverage gaps: {len(limitations)} limitation(s) need review.")
+    summary = " ".join(brief) if brief else (
+        "The run did not return enough validated data to produce an issuer-level assessment. "
+        "Review the execution trace and limitations before drawing conclusions."
     )
     return ResearchReport(
         question=question,
