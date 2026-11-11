@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1020">
+  <title>WorkBridge — Financial Intelligence Workspace</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="/">
+        <span class="brand-mark"><span></span><span></span><span></span></span>
+        <span>zetheta<span class="brand-light">/workbridge</span></span>
+      </a>
+      <div class="workspace-label">WORKSPACE</div>
+      <button class="nav-item active" data-view="research"><span class="nav-icon">⌕</span> Research desk</button>
+      <button class="nav-item" data-view="history"><span class="nav-icon">◷</span> Research history</button>
+      <button class="nav-item" data-view="benchmarks"><span class="nav-icon">▦</span> Benchmarks</button>
+      <div class="sidebar-bottom">
+        <div class="status-card">
+          <div class="status-top"><span class="pulse"></span> SYSTEM STATUS</div>
+          <strong id="system-status">Connecting…</strong>
+          <span id="provider-count">Checking data providers</span>
+        </div>
+        <div class="sidebar-foot">WORKBRIDGE <span>v0.2.0</span><br><small>Evidence before opinions.</small></div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="crumb">Workspace <span>/</span> <b id="crumb-current">Research desk</b></div>
+        <div class="top-actions"><span class="secure-label">LOCAL SESSION</span><span class="avatar">W</span></div>
+      </header>
+
+      <section class="view active" id="view-research">
+        <div class="page-heading">
+          <div><div class="eyebrow">INTELLIGENCE, WITH PROVENANCE</div><h1>Research desk<span class="accent">.</span></h1>
+          <p>Ask a question. WorkBridge builds a bounded plan, gathers evidence, and shows what it could—and couldn't—verify.</p></div>
+          <div class="heading-orbit"><div class="orbit o1"></div><div class="orbit o2"></div><div class="orbit-core">W</div></div>
+        </div>
+
+        <div class="research-layout">
+          <section class="panel composer">
+            <div class="panel-head"><div><span class="step-tag">01</span><span class="panel-title">Define your research</span></div><span class="live-dot">READY</span></div>
+            <label for="question">RESEARCH QUESTION</label>
+            <textarea id="question" rows="4" placeholder="Example: Analyze MSFT's latest reported revenue, profitability, balance sheet and 1-year market trend. Highlight material risks.">Analyze MSFT's latest reported revenue, profitability, balance sheet and 1-year market trend. Highlight material risks.</textarea>
+            <div class="prompt-hints"><button class="hint" data-prompt="Analyze MSFT's latest reported revenue, profitability, balance sheet and 1-year market trend. Highlight material risks.">MSFT · Fundamentals</button><button class="hint" data-prompt="Compare AAPL and GOOGL on latest reported revenue, net income and balance-sheet strength.">AAPL vs GOOGL</button><button class="hint" data-prompt="Explain recent inflation and interest-rate trends using FRED data.">Macro · Inflation</button></div>
+            <div class="composer-footer"><div class="step-control"><label for="max-steps">MAX PLAN STEPS</label><select id="max-steps"><option>6</option><option selected>12</option><option>16</option><option>20</option></select></div><button id="run-research" class="primary-btn"><span>Run research</span><span class="arrow">↗</span></button></div>
+            <div class="fine-print">Research support only · Not investment advice · No trades are executed</div>
+          </section>
+
+          <section class="side-stack">
+            <div class="mini-panel">
+              <div class="mini-label">RESEARCH ENGINE</div><div class="engine-line"><span class="engine-icon">✳</span><div><strong>Bounded agent</strong><small>Plan → Act → Observe → Synthesize</small></div></div>
+              <div class="engine-meta"><span>Execution mode</span><b>Deterministic</b></div><div class="engine-meta"><span>Memory</span><b>SQLite · Local</b></div>
+            </div>
+            <div class="mini-panel provider-panel">
+              <div class="mini-label">CONNECTED SOURCES</div><div id="provider-list" class="provider-list"><div class="provider-row"><span>SEC EDGAR</span><i class="available">Checking</i></div></div>
+              <div class="provider-note">Optional sources require API keys in your environment.</div>
+            </div>
+          </section>
+        </div>
+
+        <section class="results hidden" id="results">
+          <div class="results-head"><div><div class="eyebrow">RESEARCH OUTPUT</div><h2 id="result-title">Research report</h2></div><div class="result-actions"><span id="result-state" class="result-state">COMPLETED</span><button id="copy-report" class="ghost-btn">Copy summary ↗</button></div></div>
+          <div class="metric-grid" id="metric-grid"></div>
+          <div class="output-grid">
+            <section class="panel output-panel"><div class="panel-head"><div><span class="step-tag">02</span><span class="panel-title">Executive summary</span></div></div><p id="summary-text" class="summary-text"></p><div id="limitations" class="limitations"></div></section>
+            <section class="panel output-panel"><div class="panel-head"><div><span class="step-tag">03</span><span class="panel-title">Agent execution</span></div></div><div id="execution-list" class="execution-list"></div></section>
+          </div>
+          <section class="panel evidence-panel"><div class="panel-head"><div><span class="step-tag">04</span><span class="panel-title">Evidence register</span></div><span id="evidence-count" class="muted">0 items</span></div><div id="evidence-list" class="evidence-list"></div></section>
+          <section class="panel findings-panel"><div class="panel-head"><div><span class="step-tag">05</span><span class="panel-title">Findings</span></div></div><div id="findings-list" class="findings-list"></div></section>
+        </section>
+      </section>
+
+      <section class="view" id="view-history"><div class="page-heading simple"><div><div class="eyebrow">YOUR RESEARCH TRAIL</div><h1>Research history<span class="accent">.</span></h1><p>Recent research sessions saved to your local SQLite memory.</p></div></div><div class="panel table-panel"><div id="history-list" class="history-list"><div class="empty-state">Loading saved sessions…</div></div></div></section>
+      <section class="view" id="view-benchmarks"><div class="page-heading simple"><div><div class="eyebrow">RELIABILITY CHECKS</div><h1>Benchmarks<span class="accent">.</span></h1><p>Offline checks for evidence identity, conflicts, confidence and memory behavior.</p></div><button class="ghost-btn" id="refresh-benchmarks">Run checks ↻</button></div><div class="benchmark-summary" id="benchmark-summary"></div><div class="panel table-panel"><div id="benchmark-list" class="benchmark-list"><div class="empty-state">Loading checks…</div></div></div></section>
+      <footer class="main-footer"><span>© ZETHETA WORKBRIDGE</span><span>Evidence-aware financial research</span><span>Built for clarity <b>✳</b></span></footer>
+    </main>
+  </div>
+  <div id="toast" class="toast"></div>
+  <script src="/app.js"></script>
+</body>
+</html>
