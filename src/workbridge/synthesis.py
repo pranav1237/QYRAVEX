@@ -171,6 +171,10 @@ def synthesize(
     )
     if filing_result:
         brief.append(f"Filing coverage: {len(filing_result.data or [])} recent SEC filing records retrieved.")
+    if not evidence:
+        brief.append(
+            "The run did not return enough validated data to produce an issuer-level assessment."
+        )
     brief.append(
         f"Evidence quality: {len(evidence)} records across {unique_sources} distinct source(s); "
         f"{len(conflicts)} potential conflict(s) detected."
