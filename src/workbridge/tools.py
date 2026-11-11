@@ -139,12 +139,14 @@ class ToolRegistry:
         records = [{"timestamp": timestamps[i], "close": quote["close"][i]}
                    for i in range(min(len(timestamps), len(quote.get("close", []))))
                    if quote["close"][i] is not None]
-        ev = _evidence("price_history", f"Retrieved {len(records)} daily closes for {symbol.upper()}",
-                       records[-5:], "Yahoo Finance chart endpoint",
-                       f"https://finance.yahoo.com/quote/{symbol.upper()}", symbol.upper(), period, "USD")
+        provider = row.get("meta", {}).get("dataProvider", "Yahoo Finance")
+        ev = _evidence("price_history", f"Retrieved {len(records)} daily closes for {symbol.upper()} from {provider}",
+                       records[-5:], provider + " daily price history",
+                       f"https://finance.yahoo.com/quote/{symbol.upper()}" if provider == "Yahoo Finance" else f"https://stooq.com/q/?s={symbol.lower()}.us", symbol.upper(), period, row.get("meta", {}).get("currency", "USD"))
         return ToolResult(tool="price_history", success=True, data={"symbol": symbol.upper(),
-                          "currency": row.get("meta", {}).get("currency"), "closes": closes,
-                          "records": records}, evidence=[ev])
+                          "currency": row.get("meta", {}).get("currency"),
+                          "provider": row.get("meta", {}).get("dataProvider", "Yahoo Finance"),
+                          "closes": closes, "records": records}, evidence=[ev])
 
     def technical_summary(self, symbol: str, period: str = "1y") -> ToolResult:
         raw = self.price_history(symbol, period)
@@ -163,8 +165,9 @@ class ToolRegistry:
         data = {"observations": len(closes), "period_return": closes[-1]/closes[0]-1,
                 "annualized_volatility": volatility, "max_drawdown": max_dd,
                 "latest_close": closes[-1]}
+        provider = raw.data.get("provider", "Yahoo Finance")
         ev = _evidence("technical_summary", f"{symbol.upper()} price return over {period}: {data['period_return']:.2%}",
-                       data, "Calculated from Yahoo Finance daily close observations",
+                       data, f"Calculated from {provider} daily close observations",
                        f"https://finance.yahoo.com/quote/{symbol.upper()}", symbol.upper(), period)
         return ToolResult(tool="technical_summary", success=True, data=data, evidence=[ev])
 
@@ -178,7 +181,7 @@ class ToolRegistry:
         data = self.macro.series(series_id, limit)
         observations = data.get("observations", [])
         ev = _evidence("macro_series", f"Retrieved {len(observations)} observations for FRED series {series_id}",
-                       observations[:5], "Federal Reserve Bank of St. Louis FRED",
+                       observations[:5], "FRED public observations",
                        f"https://fred.stlouisfed.org/series/{series_id}", series_id)
         return ToolResult(tool="macro_series", success=True, data=observations, evidence=[ev])
 
@@ -188,14 +191,14 @@ class ToolRegistry:
         evidence = [_evidence("news_search", article.get("title", "Untitled article"),
                     {"description": article.get("description"), "publishedAt": article.get("publishedAt"),
                      "url": article.get("url"), "source": article.get("source", {}).get("name")},
-                    article.get("source", {}).get("name", "NewsAPI"),
+                    article.get("source", {}).get("name", "GDELT-indexed publisher"),
                     article.get("url"), period=article.get("publishedAt")) for article in articles]
         return ToolResult(tool="news_search", success=True, data=articles, evidence=evidence)
 
     def memory_search(self, query: str, limit: int = 8) -> ToolResult:
         items = self.memory.search(query, limit)
         return ToolResult(tool="memory_search", success=True, data=[x.model_dump(mode="json") for x in items],
-                          evidence=items, cached=True)
+                          evidence=[], cached=True, warnings=["Historical memory is not counted as live evidence."])
 
     def memory_write(self, evidence: list[dict[str, Any]]) -> ToolResult:
         items = [Evidence.model_validate(item) for item in evidence]
@@ -221,6 +224,6 @@ class ToolRegistry:
 
     def source_health(self) -> ToolResult:
         from .config import settings
-        data = {"sec_edgar": True, "yahoo_chart": True, "finnhub": bool(settings.finnhub_api_key),
-                "fred": bool(settings.fred_api_key), "newsapi": bool(settings.newsapi_api_key)}
+        data = {"sec_edgar": True, "market_data_yahoo_stooq": True,
+                "fred_public_data": True, "gdelt_public_news": True}
         return ToolResult(tool="source_health", success=True, data=data)
