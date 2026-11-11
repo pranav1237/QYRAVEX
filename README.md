@@ -17,13 +17,13 @@ pytest
 workbridge research "Compare Microsoft and Alphabet's latest reported revenue growth, margins, and balance-sheet risks"
 ```
 
-The core SEC tools work without API keys. Optional providers are enabled by environment variables; missing credentials are reported as unavailable capabilities rather than silently fabricated.
+The core research workflow uses public live sources without paid API keys: SEC EDGAR for issuer facts and filings, Yahoo Finance with Stooq daily-price fallback, FRED's public graph CSV for macro observations, and GDELT DOC 2.0 for recent news metadata. Finnhub and NewsAPI are optional enrichments, not prerequisites. Each run records source URLs and retrieval timestamps; provider outages are disclosed rather than replaced with invented data.
 
 ## What it does
 
 - Plans a multi-step research task and selects tools from a typed registry.
 - Executes bounded ReAct steps with timeouts, retries, backoff, and graceful degradation.
-- Retrieves SEC company facts and filings, price history, macro series, company profiles, news, and cached local research.
+- Retrieves SEC company facts and filings, daily market prices (Yahoo Finance with Stooq fallback), public FRED macro series, GDELT-indexed news, and cached local research.
 - Stores short-term run context, persistent SQLite knowledge, and semantic-style retrieval indexes (TF-IDF fallback; optional embeddings are an extension point).
 - Tracks provenance, freshness, coverage, contradictions, confidence, and unresolved questions.
 - Synthesizes a report that separates sourced facts, calculations, interpretations, and unknowns.
@@ -48,7 +48,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/TOOLS.md](docs/TOOLS.md)
 
 ## Configuration
 
-See [.env.example](.env.example). Provider keys are optional. SEC requests identify the application with a descriptive User-Agent; set `SEC_USER_AGENT` to a valid contact string before using SEC endpoints at scale.
+See [.env.example](.env.example). No API key is required for the core SEC/market/FRED/GDELT sources. Finnhub and NewsAPI keys can be added for optional enrichment. SEC requests identify the application with a descriptive User-Agent; replace the example `SEC_USER_AGENT` with your project name and a valid contact email before using SEC endpoints.
 
 ## CLI
 
