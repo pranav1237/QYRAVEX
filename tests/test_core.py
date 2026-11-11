@@ -46,10 +46,45 @@ def test_partial_report_discloses_failure():
         {},
     )
     assert report.limitations
-    assert report.evidence == []
+    assert report.evidence == []\n    assert "did not return enough validated data" in report.executive_summary
 
 
 def test_challenge_suite():
     rows = run_challenges()
     assert len(rows) == 8
     assert all(row["passed"] for row in rows)
+
+
+def test_synthesis_builds_data_led_summary_and_source_metrics():
+    evidence = Evidence(
+        id="financial-1",
+        statement="Example Corp revenue reported as 200",
+        value=200,
+        source="SEC EDGAR XBRL",
+        entity="Example Corp",
+        period="2025-12-31",
+        unit="USD",
+    )
+    observations = [
+        ToolResult(tool="resolve_ticker", success=True, data={"ticker": "EXM", "name": "Example Corp", "cik": "1"}),
+        ToolResult(
+            tool="financial_snapshot",
+            success=True,
+            data={
+                "revenue": {"value": 200, "unit": "USD", "period_end": "2025-12-31"},
+                "net_income": {"value": 30, "unit": "USD", "period_end": "2025-12-31"},
+            },
+            evidence=[evidence],
+        ),
+        ToolResult(
+            tool="technical_summary",
+            success=True,
+            data={"period_return": 0.12, "annualized_volatility": 0.2, "max_drawdown": -0.08},
+        ),
+    ]
+    report = synthesize("Review Example Corp", observations, {"tool_calls": 3})
+    assert report.metrics["unique_sources"] == 1
+    assert report.metrics["evidence_count"] == 1
+    assert "Example Corp" in report.executive_summary
+    assert "Net margin" in report.executive_summary
+    assert "12.0%" in report.executive_summary
