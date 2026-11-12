@@ -113,8 +113,8 @@ function renderReport(data) {
     APPLE: "AAPL", MICROSOFT: "MSFT", NVIDIA: "NVDA", TESLA: "TSLA",
     AMAZON: "AMZN", GOOGLE: "GOOGL", ALPHABET: "GOOGL", META: "META"
   };
-  const companyMatch = Object.entries(alias).find(([name]) => new RegExp("\\\\b" + name + "\\\\b", "i").test(question));
-  const tickerMatch = question.match(/\\b[A-Z]{1,5}\\b/);
+  const companyMatch = Object.entries(alias).find(([name]) => new RegExp("\b" + name + "\b", "i").test(question));
+  const tickerMatch = question.match(/\b[A-Z]{1,5}\b/);
   const symbol = stockStep?.args?.symbol || companyMatch?.[1] && alias[companyMatch[1]] || tickerMatch?.[0];
   if (symbol) loadMarketChart(symbol, "1y");
   else {
