@@ -7,6 +7,7 @@ from typing import Any
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
+import re
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -16,6 +17,7 @@ from .config import settings
 from .memory import MemoryStore
 from .synthesis import synthesize
 from .tools import ToolRegistry
+from .providers import MarketProvider, ProviderError
 
 STATIC_DIR = Path(__file__).parent / "static"
 
@@ -83,6 +85,44 @@ def research(request: ResearchRequest) -> dict[str, Any]:
         ) from exc
     finally:
         memory.close()
+
+
+
+@app.get("/api/market/{symbol}")
+def market_chart(symbol: str, period: str = "1y") -> dict[str, Any]:
+    """Return timestamped public daily prices for the interactive stock chart."""
+    ticker = symbol.upper().strip()
+    if not re.fullmatch(r"[A-Z0-9.=-]{1,15}", ticker):
+        raise HTTPException(status_code=422, detail="Invalid stock ticker.")
+    if period not in {"1mo", "3mo", "6mo", "1y", "2y", "5y"}:
+        raise HTTPException(status_code=422, detail="Unsupported chart period.")
+    try:
+        payload = MarketProvider().price_history(ticker, period)
+        results = payload.get("chart", {}).get("result") or []
+        if not results:
+            raise ProviderError("Market provider returned no price observations.")
+        row = results[0]
+        quote = row.get("indicators", {}).get("quote", [{}])[0]
+        timestamps = row.get("timestamp", [])
+        closes = quote.get("close", [])
+        points = [
+            {"timestamp": timestamps[index], "close": closes[index]}
+            for index in range(min(len(timestamps), len(closes)))
+            if closes[index] is not None
+        ]
+        if len(points) < 2:
+            raise ProviderError("Not enough daily price observations to draw a chart.")
+        return {
+            "symbol": ticker,
+            "currency": row.get("meta", {}).get("currency") or "USD",
+            "provider": row.get("meta", {}).get("dataProvider") or "Yahoo Finance",
+            "period": period,
+            "points": points,
+            "latest": points[-1],
+            "previous": points[-2],
+        }
+    except ProviderError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @app.get("/api/history")
