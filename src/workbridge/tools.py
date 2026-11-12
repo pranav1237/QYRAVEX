@@ -14,6 +14,21 @@ from .providers import MacroProvider, MarketProvider, NewsProvider, ProviderErro
 ToolFn = Callable[..., ToolResult]
 
 
+def _sec_company_url(cik: str | int) -> str:
+    """Return the human-readable SEC filing page, not the raw JSON API."""
+    return f"https://www.sec.gov/edgar/browse/?CIK={int(cik)}&owner=exclude"
+
+
+def _sec_filing_url(cik: str | int, accession_number: str | None) -> str:
+    """Link evidence to the exact SEC filing that reported the observation."""
+    if not accession_number:
+        return _sec_company_url(cik)
+    accession = str(accession_number).replace("-", "")
+    if not accession.isdigit():
+        return _sec_company_url(cik)
+    return f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{accession}/"
+
+
 def _evidence(tool: str, statement: str, value: Any, source: str, url: str | None = None,
               entity: str | None = None, period: str | None = None, unit: str | None = None,
               confidence: float = .85) -> Evidence:
@@ -66,7 +81,7 @@ class ToolRegistry:
             return ToolResult(tool="resolve_ticker", success=False, error=f"Ticker not found in SEC map: {ticker}")
         data = {"ticker": ticker.upper(), "cik": str(row["cik_str"]), "name": row["title"]}
         ev = _evidence("resolve_ticker", f"{ticker.upper()} maps to {row['title']} (CIK {row['cik_str']})",
-                       data, "SEC company tickers", "https://www.sec.gov/files/company_tickers.json", row["title"])
+                       data, "SEC company tickers", _sec_company_url(row["cik_str"]), row["title"])
         return ToolResult(tool="resolve_ticker", success=True, data=data, evidence=[ev])
 
     def sec_company_facts(self, cik: str) -> ToolResult:
@@ -74,7 +89,7 @@ class ToolRegistry:
         facts = data.get("facts", {})
         summary = {"entityName": data.get("entityName"), "cik": data.get("cik"), "taxonomy_count": len(facts)}
         ev = [_evidence("sec_company_facts", f"SEC company facts retrieved for {data.get('entityName')}",
-                        summary, "SEC EDGAR companyfacts", f"https://data.sec.gov/api/xbrl/companyfacts/CIK{int(cik):010d}.json",
+                        summary, "SEC EDGAR companyfacts", _sec_company_url(cik),
                         data.get("entityName"))]
         return ToolResult(tool="sec_company_facts", success=True, data=data, evidence=ev)
 
@@ -87,7 +102,7 @@ class ToolRegistry:
                     "primaryDocument": recent.get("primaryDocument", [])[i]}
                    for i in range(min(12, len(forms)))]
         ev = [_evidence("sec_filings", f"Retrieved {len(filings)} recent SEC filings for {data.get('name')}",
-                        filings, "SEC EDGAR submissions", f"https://data.sec.gov/submissions/CIK{int(cik):010d}.json",
+                        filings, "SEC EDGAR submissions", _sec_company_url(cik),
                         data.get("name"))]
         return ToolResult(tool="sec_filings", success=True, data=filings, evidence=ev)
 
@@ -130,10 +145,10 @@ class ToolRegistry:
                 )[0]
                 snapshot[key] = {"value": entry.get("val"), "unit": unit_name,
                                  "period_end": entry.get("end"), "filed": entry.get("filed"),
-                                 "form": entry.get("form"), "tag": tag}
+                                 "form": entry.get("form"), "accession_number": entry.get("accn"), "tag": tag}
                 evidence.append(_evidence("financial_snapshot",
                     f"{entity} {key.replace('_', ' ')} reported as {entry.get('val')} {unit_name} for period ending {entry.get('end')}",
-                    entry.get("val"), "SEC EDGAR XBRL", f"https://data.sec.gov/api/xbrl/companyfacts/CIK{int(cik):010d}.json",
+                    entry.get("val"), "SEC EDGAR XBRL", _sec_filing_url(cik, entry.get("accn")),
                     entity, entry.get("end"), unit_name, .92))
                 break
         return ToolResult(tool="financial_snapshot", success=bool(snapshot), data=snapshot,
