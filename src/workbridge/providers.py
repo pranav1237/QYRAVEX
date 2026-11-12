@@ -296,7 +296,7 @@ class NewsProvider(HttpProvider):
             "TESLA": "TSLA", "AMAZON": "AMZN", "GOOGLE": "GOOGL",
             "ALPHABET": "GOOGL", "META": "META",
         }
-        tokens = __import__("re").findall(r"\\b[A-Z]{1,5}\\b", query.upper())
+        tokens = re.findall(r"[A-Z]{1,5}", query)
         excluded = {"THE", "AND", "FOR", "WITH", "FROM", "WHAT", "HOW", "STOCK", "STOCKS", "NEWS", "LATEST", "ANALYZE", "ANALYSIS", "PRICE", "PERFORMANCE", "COMPANY", "SHARE", "SHARES", "ABOUT", "OF", "ON", "IS"}
         for token in tokens:
             if token in aliases:
