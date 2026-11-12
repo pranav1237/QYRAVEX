@@ -77,7 +77,7 @@ def synthesize(
                     for item in articles[:3]
                 ]
                 findings.append(
-                    f"Recent news context from GDELT: {'; '.join(headlines)}. "
+                    f"Recent news context from public news search: {'; '.join(headlines)}. "
                     "Headlines are leads for review, not independently verified facts."
                 )
             else:
