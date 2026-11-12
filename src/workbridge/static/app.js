@@ -73,7 +73,9 @@ function renderReport(data) {
   const limitations = report.limitations || [];
   $("#limitations").innerHTML = limitations.length ? limitations.map(item => {
     const raw = String(item);
-    const friendly = raw.includes("429") || raw.includes("cooldown active") ? "Market data is temporarily rate-limited across providers. WorkBridge will use cached results when available; SEC filings and reported financials remain independent."
+    const isNewsLimit = /gdeltproject\\.org|news\\.google\\.com|news_search/i.test(raw);
+    const friendly = (raw.includes("429") || raw.includes("cooldown active")) && isNewsLimit ? "News search was rate-limited. WorkBridge tries Google News RSS as a live alternative; the news section may be incomplete if both sources are unavailable."
+      : raw.includes("429") || raw.includes("cooldown active") ? "Market data was rate-limited. WorkBridge tries Stooq as an alternate daily-price source; market metrics may be unavailable if both providers are unavailable."
       : raw.includes("API_KEY") || raw.includes("not configured") ? "An optional data source is not configured. Add its API key to enable this enrichment."
       : raw.startsWith("Optional sources not configured:") ? raw
       : raw.length > 190 ? raw.slice(0, 187) + "…"
@@ -83,7 +85,9 @@ function renderReport(data) {
   const observations = data.observations || [];
   $("#execution-list").innerHTML = observations.length ? observations.map(item => {
     const rawError = String(item.error || "");
-    const shortError = rawError.includes("429") || rawError.includes("cooldown active") ? "Market providers rate-limited · fallback exhausted"
+    const shortError = (rawError.includes("429") || rawError.includes("cooldown active")) && item.tool === "news_search" ? "News providers rate-limited · fallback exhausted"
+      : rawError.includes("429") || rawError.includes("cooldown active") ? "Market providers rate-limited · fallback exhausted"
+      : item.warnings?.length ? "Completed with live-source fallback"
       : rawError.includes("API_KEY") ? "API key missing"
       : rawError.includes("not configured") ? "Provider not configured"
       : rawError.includes("Skipped:") ? "Skipped · prerequisite unavailable"
