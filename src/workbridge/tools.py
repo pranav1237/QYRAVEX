@@ -31,7 +31,7 @@ class ToolRegistry:
             "resolve_ticker": ("Resolve a public-company ticker to SEC CIK and legal name.", self.resolve_ticker),
             "sec_company_facts": ("Retrieve reported XBRL company facts from SEC EDGAR.", self.sec_company_facts),
             "sec_filings": ("Retrieve recent SEC filing metadata.", self.sec_filings),
-            "financial_snapshot": ("Extract latest revenue, net income, assets, liabilities and equity.", self.financial_snapshot),
+            "financial_snapshot": ("Extract reported income statement, balance sheet and cash-flow facts.", self.financial_snapshot),
             "price_history": ("Retrieve daily adjusted market-price history.", self.price_history),
             "technical_summary": ("Calculate return, volatility and drawdown from price history.", self.technical_summary),
             "company_profile": ("Retrieve company profile, sector and market capitalization.", self.company_profile),
@@ -96,11 +96,18 @@ class ToolRegistry:
         us = data.get("facts", {}).get("us-gaap", {})
         candidates = {
             "revenue": ["RevenueFromContractWithCustomerExcludingAssessedTax", "Revenues", "SalesRevenueNet"],
-            "net_income": ["NetIncomeLoss"],
-            "total_assets": ["Assets"],
-            "total_liabilities": ["Liabilities"],
-            "stockholders_equity": ["StockholdersEquity"],
+            "gross_profit": ["GrossProfit"],
             "operating_income": ["OperatingIncomeLoss"],
+            "net_income": ["NetIncomeLoss"],
+            "diluted_eps": ["EarningsPerShareDiluted"],
+            "total_assets": ["Assets"],
+            "current_assets": ["AssetsCurrent"],
+            "total_liabilities": ["Liabilities"],
+            "current_liabilities": ["LiabilitiesCurrent"],
+            "stockholders_equity": ["StockholdersEquity"],
+            "cash_and_equivalents": ["CashAndCashEquivalentsAtCarryingValue"],
+            "operating_cash_flow": ["NetCashProvidedByUsedInOperatingActivities"],
+            "capital_expenditures": ["PaymentsToAcquirePropertyPlantAndEquipment"],
         }
         snapshot: dict[str, Any] = {}
         evidence: list[Evidence] = []
@@ -115,7 +122,12 @@ class ToolRegistry:
                 entries = units.get(unit_name, []) if unit_name else []
                 if not entries:
                     continue
-                entry = sorted(entries, key=lambda x: x.get("filed", ""), reverse=True)[0]
+                # Prefer the latest filed observation, retaining its actual period and form.
+                entry = sorted(
+                    entries,
+                    key=lambda x: (x.get("filed", ""), x.get("end", "")),
+                    reverse=True,
+                )[0]
                 snapshot[key] = {"value": entry.get("val"), "unit": unit_name,
                                  "period_end": entry.get("end"), "filed": entry.get("filed"),
                                  "form": entry.get("form"), "tag": tag}
