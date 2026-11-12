@@ -208,15 +208,16 @@ class MacroProvider(HttpProvider):
 
 
 class NewsProvider(HttpProvider):
-    """Live news search with GDELT primary, Google News RSS fallback and a short cache."""
+    """Aggregate public news indexes and optional licensed news APIs."""
 
     _cache: dict[str, tuple[float, dict[str, Any]]] = {}
     _cache_lock = threading.Lock()
-    cache_ttl_seconds = 300
+    cache_ttl_seconds = 180
 
-    def search(self, query: str, page_size: int = 10) -> dict[str, Any]:
+    def search(self, query: str, page_size: int = 30) -> dict[str, Any]:
         normalized_query = " ".join(query.split()).casefold()
-        cache_key = f"{normalized_query}:{min(max(page_size, 1), 50)}"
+        limit = min(max(page_size, 1), 50)
+        cache_key = f"{normalized_query}:{limit}"
         now = time.time()
         with self._cache_lock:
             cached = self._cache.get(cache_key)
@@ -225,32 +226,101 @@ class NewsProvider(HttpProvider):
                 result["cached"] = True
                 return result
 
+        articles: list[dict[str, Any]] = []
+        providers: list[str] = []
+        errors: list[str] = []
+
+        # Independent providers are attempted separately: one outage must not hide
+        # results already obtained from another source.
         try:
             data = self.get_json(
                 "https://api.gdeltproject.org/api/v2/doc/doc",
                 params={"query": query, "mode": "ArtList", "format": "json",
-                        "maxrecords": min(max(page_size, 1), 50), "sort": "DateDesc"},
+                        "maxrecords": limit, "sort": "DateDesc"},
                 retries=0,
             )
-            articles = self._normalize_gdelt(data.get("articles", []))
-            if not articles:
-                raise ProviderError("GDELT returned no matching articles")
-            result = {"articles": articles, "source": "GDELT DOC 2.0",
-                      "provider": "GDELT DOC 2.0", "fallback_used": False}
-        except ProviderError as gdelt_error:
-            try:
-                result = self._google_news_rss(query, page_size)
-            except ProviderError as rss_error:
-                raise ProviderError(
-                    "Google News RSS fallback unavailable after GDELT failed "
-                    f"({gdelt_error}); fallback error: {rss_error}"
-                ) from rss_error
-            result["fallback_used"] = True
-            result["fallback_reason"] = f"GDELT unavailable: {gdelt_error}"
+            found = self._normalize_gdelt(data.get("articles", []))
+            if found:
+                articles.extend(found)
+                providers.append("GDELT DOC 2.0")
+        except ProviderError as exc:
+            errors.append(f"GDELT: {exc}")
 
+        try:
+            found = self._google_news_rss(query, limit)["articles"]
+            articles.extend(found)
+            providers.append("Google News RSS")
+        except ProviderError as exc:
+            errors.append(f"Google News RSS: {exc}")
+
+        ticker = self._ticker_from_query(query)
+        if ticker:
+            try:
+                found = self._yahoo_finance_rss(ticker, limit)["articles"]
+                articles.extend(found)
+                providers.append("Yahoo Finance RSS")
+            except ProviderError as exc:
+                errors.append(f"Yahoo Finance RSS: {exc}")
+
+        if settings.newsapi_api_key:
+            try:
+                found = self._newsapi(query, limit)["articles"]
+                articles.extend(found)
+                providers.append("NewsAPI")
+            except ProviderError as exc:
+                errors.append(f"NewsAPI: {exc}")
+
+        merged = self._deduplicate(articles, limit)
+        if not merged:
+            detail = "; ".join(errors) or "All configured news sources returned no matching articles"
+            raise ProviderError(f"No live news results available. {detail}")
+
+        result = {
+            "articles": merged,
+            "source": ", ".join(providers),
+            "provider": ", ".join(providers),
+            "providers": providers,
+            "fallback_used": len(providers) > 0 and "GDELT DOC 2.0" not in providers,
+            "partial_errors": errors,
+            "coverage_note": "Aggregated indexed publisher results; not an exhaustive crawl of the entire internet.",
+        }
         with self._cache_lock:
             self._cache[cache_key] = (time.time(), result)
         return result
+
+    @staticmethod
+    def _ticker_from_query(query: str) -> str | None:
+        aliases = {
+            "APPLE": "AAPL", "MICROSOFT": "MSFT", "NVIDIA": "NVDA",
+            "TESLA": "TSLA", "AMAZON": "AMZN", "GOOGLE": "GOOGL",
+            "ALPHABET": "GOOGL", "META": "META",
+        }
+        tokens = __import__("re").findall(r"\\b[A-Z]{1,5}\\b", query.upper())
+        excluded = {"THE", "AND", "FOR", "WITH", "FROM", "WHAT", "HOW", "STOCK", "NEWS", "LATEST"}
+        for token in tokens:
+            if token in aliases:
+                return aliases[token]
+            if token not in excluded:
+                return token
+        for name, ticker in aliases.items():
+            if name.lower() in query.lower():
+                return ticker
+        return None
+
+    @staticmethod
+    def _deduplicate(articles: list[dict[str, Any]], limit: int) -> list[dict[str, Any]]:
+        unique: dict[str, dict[str, Any]] = {}
+        for article in articles:
+            url = (article.get("url") or "").split("?")[0].rstrip("/")
+            title = " ".join((article.get("title") or "").casefold().split())
+            key = url.casefold() or title
+            if key and key not in unique:
+                unique[key] = article
+        return sorted(
+            unique.values(),
+            key=lambda item: item.get("publishedAt") or "",
+            reverse=True,
+        )[:limit]
 
     @staticmethod
     def _normalize_gdelt(articles: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -269,27 +339,20 @@ class NewsProvider(HttpProvider):
             })
         return normalized
 
-    def _google_news_rss(self, query: str, page_size: int) -> dict[str, Any]:
-        response = self.get_text(
-            "https://news.google.com/rss/search",
-            params={"q": query, "hl": "en-US", "gl": "US", "ceid": "US:en"},
-            headers={"Accept": "application/rss+xml, application/xml, text/xml"},
-            retries=0,
-        )
+    def _parse_rss(self, response: str, page_size: int, default_source: str) -> list[dict[str, Any]]:
         try:
             root = ET.fromstring(response)
         except ET.ParseError as exc:
-            raise ProviderError(f"Google News RSS returned invalid XML: {exc}") from exc
-
+            raise ProviderError(f"RSS provider returned invalid XML: {exc}") from exc
         articles = []
-        for item in root.findall(".//item")[:min(max(page_size, 1), 50)]:
+        for item in root.findall(".//item")[:page_size]:
             title = item.findtext("title") or "Untitled article"
             link = item.findtext("link")
             pub_date = item.findtext("pubDate")
             source_node = item.find("source")
             source_name = (
                 source_node.text if source_node is not None and source_node.text
-                else "Google News publisher"
+                else default_source
             )
             published = None
             if pub_date:
@@ -303,7 +366,46 @@ class NewsProvider(HttpProvider):
                     "url": link, "source": {"name": source_name},
                 })
         if not articles:
-            raise ProviderError("Google News RSS returned no matching articles")
-        return {"articles": articles, "source": "Google News RSS",
-                "provider": "Google News RSS"}
+            raise ProviderError("RSS provider returned no matching articles")
+        return articles
 
+    def _google_news_rss(self, query: str, page_size: int) -> dict[str, Any]:
+        response = self.get_text(
+            "https://news.google.com/rss/search",
+            params={"q": query, "hl": "en-US", "gl": "US", "ceid": "US:en"},
+            headers={"Accept": "application/rss+xml, application/xml, text/xml"},
+            retries=0,
+        )
+        return {"articles": self._parse_rss(response, page_size, "Google News publisher"),
+                "source": "Google News RSS", "provider": "Google News RSS"}
+
+    def _yahoo_finance_rss(self, ticker: str, page_size: int) -> dict[str, Any]:
+        response = self.get_text(
+            "https://feeds.finance.yahoo.com/rss/2.0/headline",
+            params={"s": ticker, "region": "US", "lang": "en-US"},
+            headers={"Accept": "application/rss+xml, application/xml, text/xml"},
+            retries=0,
+        )
+        return {"articles": self._parse_rss(response, page_size, "Yahoo Finance"),
+                "source": "Yahoo Finance RSS", "provider": "Yahoo Finance RSS"}
+
+    def _newsapi(self, query: str, page_size: int) -> dict[str, Any]:
+        data = self.get_json(
+            "https://newsapi.org/v2/everything",
+            params={"q": query, "sortBy": "publishedAt", "pageSize": page_size,
+                    "language": "en"},
+            headers={"X-Api-Key": settings.newsapi_api_key or ""},
+            retries=0,
+        )
+        if data.get("status") != "ok":
+            raise ProviderError(str(data.get("message") or "NewsAPI returned an error"))
+        articles = [{
+            "title": item.get("title") or "Untitled article",
+            "description": item.get("description"),
+            "publishedAt": item.get("publishedAt"),
+            "url": item.get("url"),
+            "source": {"name": (item.get("source") or {}).get("name") or "NewsAPI publisher"},
+        } for item in data.get("articles", []) if item.get("url")]
+        if not articles:
+            raise ProviderError("NewsAPI returned no matching articles")
+        return {"articles": articles, "source": "NewsAPI", "provider": "NewsAPI"}
