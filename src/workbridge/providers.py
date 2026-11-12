@@ -238,7 +238,13 @@ class NewsProvider(HttpProvider):
             result = {"articles": articles, "source": "GDELT DOC 2.0",
                       "provider": "GDELT DOC 2.0", "fallback_used": False}
         except ProviderError as gdelt_error:
-            result = self._google_news_rss(query, page_size)
+            try:
+                result = self._google_news_rss(query, page_size)
+            except ProviderError as rss_error:
+                raise ProviderError(
+                    "Google News RSS fallback unavailable after GDELT failed "
+                    f"({gdelt_error}); fallback error: {rss_error}"
+                ) from rss_error
             result["fallback_used"] = True
             result["fallback_reason"] = f"GDELT unavailable: {gdelt_error}"
 
