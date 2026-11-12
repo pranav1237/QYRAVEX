@@ -81,7 +81,11 @@ def synthesize(
     metrics: dict[str, float],
 ) -> ResearchReport:
     # Keep the Evidence Register scoped to the actual research terms, not every tool output.
-    evidence = [\n        item for result in observations for item in result.evidence\n        if _matches_research_query(" ".join((item.statement, item.entity or "", item.source)), question)\n    ]\n    conflicts = detect_conflicts(evidence)
+    evidence = [
+        item for result in observations for item in result.evidence
+        if _matches_research_query(" ".join((item.statement, item.entity or "", item.source)), question)
+    ]
+    conflicts = detect_conflicts(evidence)
     findings: list[str] = []
     limitations: list[str] = []
     unanswered: list[str] = []
@@ -134,7 +138,8 @@ def synthesize(
                     str(article.get("source", {}).get("name", "")),
                 )), question)
             ]
-            if articles:\n                headlines = [
+            if articles:
+                headlines = [
                     f"{item.get('title', 'Untitled')} "
                     f"({item.get('source', {}).get('name', 'publisher')})"
                     for item in articles[:8]
