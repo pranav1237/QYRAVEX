@@ -181,6 +181,18 @@ class MarketProvider(HttpProvider):
                 f"Yahoo Finance unavailable ({yahoo_error}); Stooq fallback unavailable ({stooq_error})"
             ) from stooq_error
 
+    def quote(self, symbol: str) -> dict[str, Any]:
+        if not settings.finnhub_api_key:
+            raise ProviderError("Optional FINNHUB_API_KEY is not configured")
+        data = self.get_json(
+            "https://finnhub.io/api/v1/quote",
+            params={"symbol": symbol.upper(), "token": settings.finnhub_api_key},
+            retries=0,
+        )
+        if not data.get("c"):
+            raise ProviderError(f"Finnhub returned no live quote for {symbol}")
+        return data
+
     def profile(self, symbol: str) -> dict[str, Any]:
         if not settings.finnhub_api_key:
             raise ProviderError("Optional FINNHUB_API_KEY is not configured")
