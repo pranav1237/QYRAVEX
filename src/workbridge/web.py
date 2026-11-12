@@ -1,13 +1,13 @@
 """Browser API and static dashboard for Zetheta WorkBridge."""
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
-import re
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -15,9 +15,9 @@ from .agent import ResearchAgent
 from .benchmarks import run_challenges
 from .config import settings
 from .memory import MemoryStore
+from .providers import MarketProvider, ProviderError
 from .synthesis import synthesize
 from .tools import ToolRegistry
-from .providers import MarketProvider, ProviderError
 
 STATIC_DIR = Path(__file__).parent / "static"
 
