@@ -39,7 +39,7 @@ async function loadStatus() {
     const active = Object.values(providers).filter(Boolean).length;
     $("#provider-count").textContent = `${active} public data sources supported`;
     $("#provider-list").innerHTML = Object.entries(providers).map(([name, enabled]) =>
-      `<div class="provider-row"><span>${escapeHtml(name.replaceAll("_"," ").toUpperCase())}</span><i class="${enabled ? "available" : "off"}">${enabled ? "Public endpoint" : "Unavailable"}</i></div>`
+      `<div class="provider-row"><span>${escapeHtml(name.replaceAll("_"," ").toUpperCase())}</span><i class="${enabled ? "available" : "off"}">${enabled ? "Connected" : (name.includes("optional") ? "API key needed" : "Unavailable")}</i></div>`
     ).join("");
   } catch (error) {
     $("#system-status").textContent = "API unavailable";
