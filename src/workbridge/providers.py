@@ -297,9 +297,9 @@ class NewsProvider(HttpProvider):
             "ALPHABET": "GOOGL", "META": "META",
         }
         for name, ticker in aliases.items():
-            if re.search(rf"\\b{name}\\b", query, re.IGNORECASE):
+            if re.search(rf"\b{name}\b", query, re.IGNORECASE):
                 return ticker
-        tokens = re.findall(r"\\b[A-Z]{2,5}\\b", query)
+        tokens = re.findall(r"\b[A-Z]{2,5}\b", query)
         excluded = {
             "THE", "AND", "FOR", "WITH", "FROM", "WHAT", "HOW", "STOCK",
             "STOCKS", "NEWS", "LATEST", "ANALYZE", "ANALYSIS", "PRICE",
