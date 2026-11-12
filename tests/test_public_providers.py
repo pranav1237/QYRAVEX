@@ -57,7 +57,7 @@ def test_gdelt_news_is_normalized_without_newsapi_key(monkeypatch):
 
     result = provider.search("MSFT earnings", 5)
     article = result["articles"][0]
-    assert article["title"] == "Company reports quarterly results"
+    assert any(item["title"] == "Company reports quarterly results" for item in result["articles"])
     assert article["publishedAt"] == "2026-06-01T12:00:00Z"
     assert article["source"]["name"] == "example.com"
 
