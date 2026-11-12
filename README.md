@@ -17,7 +17,7 @@ pytest
 workbridge research "Compare Microsoft and Alphabet's latest reported revenue growth, margins, and balance-sheet risks"
 ```
 
-The core research workflow uses public live sources without paid API keys: SEC EDGAR for issuer facts and filings, Yahoo Finance with Stooq daily-price fallback, FRED's public graph CSV for macro observations, and GDELT DOC 2.0 for recent news metadata. Finnhub and NewsAPI are optional enrichments, not prerequisites. Each run records source URLs and retrieval timestamps; provider outages are disclosed rather than replaced with invented data.
+The core research workflow uses public live sources without paid API keys: SEC EDGAR for issuer facts and filings, Yahoo Finance with Stooq daily-price fallback, FRED's public graph CSV for macro observations, and GDELT DOC 2.0 for recent news metadata. Finnhub company news and live quote data plus NewsAPI article search are optional enrichments, not prerequisites. Configure `FINNHUB_API_KEY` and `NEWSAPI_API_KEY` in your local `.env` or deployment environment secrets to activate them; never commit real keys. Each run records source URLs and retrieval timestamps; provider outages are disclosed rather than replaced with invented data.
 
 ## What it does
 
@@ -48,7 +48,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/TOOLS.md](docs/TOOLS.md)
 
 ## Configuration
 
-See [.env.example](.env.example). No API key is required for the core SEC/market/FRED/GDELT sources. Finnhub and NewsAPI keys can be added for optional enrichment. SEC requests identify the application with a descriptive User-Agent; replace the example `SEC_USER_AGENT` with your project name and a valid contact email before using SEC endpoints.
+See [.env.example](.env.example). No API key is required for the core SEC/market/FRED/GDELT sources. Create keys at [Finnhub](https://finnhub.io/register) and [NewsAPI](https://newsapi.org/register), then set `FINNHUB_API_KEY` and `NEWSAPI_API_KEY` in `.env` or your hosting provider's environment variables. Restart the web service after setting them. Finnhub adds company news and a live quote to the stock chart; NewsAPI adds another news feed. SEC requests identify the application with a descriptive User-Agent; replace the example `SEC_USER_AGENT` with your project name and a valid contact email before using SEC endpoints.
 
 ## CLI
 
