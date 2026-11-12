@@ -26,3 +26,26 @@ def test_benchmark_api_returns_all_challenges():
     payload = response.json()
     assert payload["total"] == 8
     assert payload["passed"] == 8
+
+
+
+def test_market_chart_api_returns_timestamped_price_observations(monkeypatch):
+    def fake_history(self, symbol, period):
+        return {"chart": {"result": [{
+            "meta": {"currency": "USD", "dataProvider": "Yahoo Finance"},
+            "timestamp": [1794432000, 1794518400, 1794604800],
+            "indicators": {"quote": [{"close": [100.0, 102.0, 101.5]}]},
+        }]}}
+    monkeypatch.setattr("workbridge.web.MarketProvider.price_history", fake_history)
+    response = client.get("/api/market/MSFT?period=1y")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["symbol"] == "MSFT"
+    assert payload["provider"] == "Yahoo Finance"
+    assert len(payload["points"]) == 3
+    assert payload["latest"]["close"] == 101.5
+
+
+def test_market_chart_api_rejects_invalid_period():
+    response = client.get("/api/market/MSFT?period=intraday")
+    assert response.status_code == 422
