@@ -25,3 +25,16 @@ class Settings:
 
 
 settings = Settings()
+
+
+def refresh_optional_api_keys() -> None:
+    """Refresh optional provider credentials after Codespaces injects secrets.
+
+    Codespaces secrets added after a codespace was created may only appear in
+    the environment after it is restarted. Refreshing here also avoids keeping
+    stale empty values in the module-level Settings instance.
+    """
+    from os import getenv
+
+    object.__setattr__(settings, "newsapi_api_key", getenv("NEWSAPI_API_KEY") or None)
+    object.__setattr__(settings, "finnhub_api_key", getenv("FINNHUB_API_KEY") or None)
