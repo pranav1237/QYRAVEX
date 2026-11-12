@@ -31,13 +31,55 @@ def detect_conflicts(evidence: list[Evidence]) -> list[dict[str, Any]]:
     return conflicts
 
 
+_COMPANY_ALIASES = {
+    "msft": {"msft", "microsoft"}, "microsoft": {"msft", "microsoft"},
+    "aapl": {"aapl", "apple"}, "apple": {"aapl", "apple"},
+    "googl": {"googl", "google", "alphabet"}, "google": {"googl", "google", "alphabet"},
+    "alphabet": {"googl", "google", "alphabet"},
+    "nvda": {"nvda", "nvidia"}, "nvidia": {"nvda", "nvidia"},
+    "amzn": {"amzn", "amazon"}, "amazon": {"amzn", "amazon"},
+    "meta": {"meta", "facebook"}, "facebook": {"meta", "facebook"},
+    "tsla": {"tsla", "tesla"}, "tesla": {"tsla", "tesla"},
+}
+_QUERY_STOPWORDS = {
+    "a", "an", "and", "are", "as", "at", "be", "by", "for", "from", "how",
+    "in", "is", "it", "latest", "me", "of", "on", "or", "please", "recent",
+    "show", "the", "their", "this", "to", "what", "when", "where", "which",
+    "who", "with", "about", "analyze", "analysis", "research", "information",
+    "data", "news", "articles", "article", "evidence", "report", "reports",
+    "stock", "stocks", "share", "shares", "company", "companies", "financial",
+    "finance", "market", "markets", "performance", "overview", "update",
+}
+
+
+def _query_relevance_terms(question: str) -> tuple[set[str], set[str]]:
+    tokens = set(__import__("re").findall(r"[a-z0-9]+", question.casefold()))
+    company_terms: set[str] = set()
+    for token in tokens:
+        company_terms.update(_COMPANY_ALIASES.get(token, set()))
+    topic_terms = tokens - _QUERY_STOPWORDS - company_terms
+    return company_terms, topic_terms
+
+
+def _matches_research_query(text: str, question: str) -> bool:
+    company_terms, topic_terms = _query_relevance_terms(question)
+    text_tokens = set(__import__("re").findall(r"[a-z0-9]+", text.casefold()))
+    expanded_text = set(text_tokens)
+    for token in text_tokens:
+        expanded_text.update(_COMPANY_ALIASES.get(token, set()))
+    if company_terms and topic_terms:
+        return bool(company_terms & expanded_text) and bool(topic_terms & expanded_text)
+    if company_terms:
+        return bool(company_terms & expanded_text)
+    return bool(topic_terms & expanded_text)
+
+
 def synthesize(
     question: str,
     observations: list[ToolResult],
     metrics: dict[str, float],
 ) -> ResearchReport:
-    evidence = [item for result in observations for item in result.evidence]
-    conflicts = detect_conflicts(evidence)
+    # Keep the Evidence Register scoped to the actual research terms, not every tool output.\n    evidence = [\n        item for result in observations for item in result.evidence\n        if _matches_research_query(" ".join((item.statement, item.entity or "", item.source)), question)\n    ]\n    conflicts = detect_conflicts(evidence)
     findings: list[str] = []
     limitations: list[str] = []
     unanswered: list[str] = []
@@ -82,8 +124,7 @@ def synthesize(
                 news_payload.get("provider", "public news search")
                 if isinstance(news_payload, dict) else "public news search"
             )
-            if articles:
-                headlines = [
+            articles = [\n                article for article in articles\n                if _matches_research_query(" ".join((\n                    str(article.get("title", "")),\n                    str(article.get("description") or ""),\n                    str(article.get("source", {}).get("name", "")),\n                )), question)\n            ]\n            if articles:\n                headlines = [
                     f"{item.get('title', 'Untitled')} "
                     f"({item.get('source', {}).get('name', 'publisher')})"
                     for item in articles[:8]
@@ -94,7 +135,7 @@ def synthesize(
                 )
             else:
                 limitations.append(
-                    f"{provider_name} returned no recent matching news articles for this query."
+                    f"{provider_name} returned no articles matching the specific research terms in this query."
                 )
         elif result.tool == "macro_series" and result.data:
             latest = result.data[-1]
