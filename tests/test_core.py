@@ -89,3 +89,46 @@ def test_synthesis_builds_data_led_summary_and_source_metrics():
     assert "Example Corp" in report.executive_summary
     assert "Net margin" in report.executive_summary
     assert "12.0%" in report.executive_summary
+
+
+
+def test_news_synthesis_accepts_structured_provider_payload():
+    observations = [
+        ToolResult(
+            tool="news_search",
+            success=True,
+            data={
+                "provider": "Google News RSS",
+                "articles": [
+                    {
+                        "title": "Example Corp announces quarterly results",
+                        "source": {"name": "Example Publisher"},
+                        "url": "https://example.com/results",
+                    },
+                    {
+                        "title": "Analysts review Example Corp outlook",
+                        "source": {"name": "Market Desk"},
+                        "url": "https://example.com/outlook",
+                    },
+                ],
+            },
+        )
+    ]
+    report = synthesize("Research Example Corp", observations, {})
+    assert any("Google News RSS" in finding for finding in report.findings)
+    assert any("Example Corp announces quarterly results" in finding for finding in report.findings)
+    assert not any("slice" in item for item in report.limitations)
+
+
+def test_news_synthesis_still_accepts_legacy_article_list():
+    observations = [
+        ToolResult(
+            tool="news_search",
+            success=True,
+            data=[
+                {"title": "Legacy headline", "source": {"name": "Publisher"}}
+            ],
+        )
+    ]
+    report = synthesize("Research Example Corp", observations, {})
+    assert any("Legacy headline" in finding for finding in report.findings)
