@@ -118,8 +118,6 @@ def synthesize(
                 + "."
             )
         elif result.tool == "news_search":
-            # Providers return a structured envelope: {articles, provider, ...}.
-            # Accept a legacy list as well so older cached observations remain readable.
             news_payload = result.data or {}
             articles = (
                 news_payload.get("articles", [])
@@ -130,7 +128,6 @@ def synthesize(
                 news_payload.get("provider", "public news search")
                 if isinstance(news_payload, dict) else "public news search"
             )
-            # The news provider already searched the full query; keep all returned articles.
             if articles:
                 headlines = [
                     f"{item.get('title', 'Untitled')} "
@@ -143,7 +140,7 @@ def synthesize(
                 )
             else:
                 limitations.append(
-                    f"{provider_name} returned no articles matching the specific research terms in this query."
+                    f"{provider_name} returned no articles for the research query."
                 )
         elif result.tool == "macro_series" and result.data:
             latest = result.data[-1]
