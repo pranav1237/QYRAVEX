@@ -74,7 +74,7 @@ class Planner:
                 "macro_series",
                 {"series_id": "CPIAUCSL", "limit": 18},
                 "Use public FRED observations; series choice is a proxy.")
-        add("Search recent news context", "news_search", {"query": question, "page_size": 8},
+        add("Search recent news context", "news_search", {"query": question, "page_size": 30},
             "Optional provider; disclose when unavailable.")
         return ResearchPlan(question=question, steps=steps,
             assumptions=["Ticker extraction is heuristic; validate the intended issuer.",
