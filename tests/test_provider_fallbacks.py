@@ -53,5 +53,5 @@ def test_news_reports_failure_only_when_both_public_sources_fail(monkeypatch):
         provider, "get_text",
         lambda *args, **kwargs: (_ for _ in ()).throw(ProviderError("Google News HTTP 429")),
     )
-    with pytest.raises(ProviderError, match="Google News RSS fallback unavailable"):
+    with pytest.raises(ProviderError, match="No live news results available"):
         provider.search("Example Corp", 5)
