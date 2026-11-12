@@ -7,6 +7,7 @@ import time
 from collections.abc import Callable
 from typing import Any
 
+from .config import settings
 from .memory import MemoryStore
 from .models import Evidence, ToolResult
 from .providers import MacroProvider, MarketProvider, NewsProvider, ProviderError, SecProvider
@@ -286,7 +287,7 @@ class ToolRegistry:
             "gdelt_public_news": True,
             "google_news_rss": True,
             "yahoo_finance_rss": True,
-            "newsapi_optional": bool(__import__("workbridge.config", fromlist=["settings"]).settings.newsapi_api_key),
-            "finnhub_optional": bool(__import__("workbridge.config", fromlist=["settings"]).settings.finnhub_api_key),
+            "newsapi_optional": bool(settings.newsapi_api_key),
+            "finnhub_optional": bool(settings.finnhub_api_key),
         }
         return ToolResult(tool="source_health", success=True, data=data)
