@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+import re
 from datetime import UTC, datetime
 from typing import Any
 
@@ -48,12 +49,12 @@ _QUERY_STOPWORDS = {
     "who", "with", "about", "analyze", "analysis", "research", "information",
     "data", "news", "articles", "article", "evidence", "report", "reports",
     "stock", "stocks", "share", "shares", "company", "companies", "financial",
-    "finance", "market", "markets", "performance", "overview", "update",
+    "finance", "market", "markets", "performance", "overview", "update", "results", "fundamentals", "metrics", "valuation", "trend",
 }
 
 
 def _query_relevance_terms(question: str) -> tuple[set[str], set[str]]:
-    tokens = set(__import__("re").findall(r"[a-z0-9]+", question.casefold()))
+    tokens = set(re.findall(r"[a-z0-9]+", question.casefold()))
     company_terms: set[str] = set()
     for token in tokens:
         company_terms.update(_COMPANY_ALIASES.get(token, set()))
