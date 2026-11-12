@@ -41,6 +41,7 @@ def test_fred_public_csv_does_not_require_api_key(monkeypatch):
 
 
 def test_gdelt_news_is_normalized_without_newsapi_key(monkeypatch):
+    NewsProvider._cache.clear()
     provider = NewsProvider()
     monkeypatch.setattr(
         provider,
