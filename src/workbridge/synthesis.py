@@ -80,7 +80,8 @@ def synthesize(
     observations: list[ToolResult],
     metrics: dict[str, float],
 ) -> ResearchReport:
-    # Keep the Evidence Register scoped to the actual research terms, not every tool output.\n    evidence = [\n        item for result in observations for item in result.evidence\n        if _matches_research_query(" ".join((item.statement, item.entity or "", item.source)), question)\n    ]\n    conflicts = detect_conflicts(evidence)
+    # Keep the Evidence Register scoped to the actual research terms, not every tool output.
+    evidence = [\n        item for result in observations for item in result.evidence\n        if _matches_research_query(" ".join((item.statement, item.entity or "", item.source)), question)\n    ]\n    conflicts = detect_conflicts(evidence)
     findings: list[str] = []
     limitations: list[str] = []
     unanswered: list[str] = []
@@ -125,7 +126,15 @@ def synthesize(
                 news_payload.get("provider", "public news search")
                 if isinstance(news_payload, dict) else "public news search"
             )
-            articles = [\n                article for article in articles\n                if _matches_research_query(" ".join((\n                    str(article.get("title", "")),\n                    str(article.get("description") or ""),\n                    str(article.get("source", {}).get("name", "")),\n                )), question)\n            ]\n            if articles:\n                headlines = [
+            articles = [
+                article for article in articles
+                if _matches_research_query(" ".join((
+                    str(article.get("title", "")),
+                    str(article.get("description") or ""),
+                    str(article.get("source", {}).get("name", "")),
+                )), question)
+            ]
+            if articles:\n                headlines = [
                     f"{item.get('title', 'Untitled')} "
                     f"({item.get('source', {}).get('name', 'publisher')})"
                     for item in articles[:8]
