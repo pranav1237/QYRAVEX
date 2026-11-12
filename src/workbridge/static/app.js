@@ -113,9 +113,19 @@ function renderReport(data) {
     APPLE: "AAPL", MICROSOFT: "MSFT", NVIDIA: "NVDA", TESLA: "TSLA",
     AMAZON: "AMZN", GOOGLE: "GOOGL", ALPHABET: "GOOGL", META: "META"
   };
-  const companyMatch = Object.entries(alias).find(([name]) => new RegExp("\b" + name + "\b", "i").test(question));
-  const tickerMatch = question.match(/\b[A-Z]{1,5}\b/);
-  const symbol = stockStep?.args?.symbol || companyMatch?.[1] && alias[companyMatch[1]] || tickerMatch?.[0];
+  const companyMatch = Object.entries(alias).find(([name]) =>
+    new RegExp("\\b" + name + "\\b", "i").test(question)
+  );
+  const ignoredTickerWords = new Set([
+    "THE", "AND", "FOR", "WITH", "FROM", "WHAT", "HOW", "STOCK", "STOCKS",
+    "NEWS", "LATEST", "ANALYZE", "ANALYSIS", "PRICE", "PERFORMANCE",
+    "COMPANY", "SHARE", "SHARES", "ABOUT", "COMPARE", "RESEARCH"
+  ]);
+  const tickerMatch = question.toUpperCase().match(/\b[A-Z]{1,5}\b/g)
+    ?.find(token => !ignoredTickerWords.has(token));
+  const symbol = stockStep?.args?.symbol
+    || (companyMatch ? alias[companyMatch[1]] : null)
+    || tickerMatch;
   if (symbol) loadMarketChart(symbol, "1y");
   else {
     const chart = $("#stock-visualizer");
