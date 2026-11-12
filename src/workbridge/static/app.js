@@ -199,7 +199,7 @@ $("#stock-visualizer [data-chart-refresh]")?.addEventListener("click", () => {
   if (activeChartSymbol) loadMarketChart(activeChartSymbol, activeChartPeriod);
 });
 
-$("#stock-visualizer [data-chart-period]").forEach(button => {
+$$("#stock-visualizer [data-chart-period]").forEach(button => {
   button.addEventListener("click", () => {
     if (activeChartSymbol) loadMarketChart(activeChartSymbol, button.dataset.chartPeriod);
   });
