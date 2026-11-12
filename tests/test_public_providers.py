@@ -60,3 +60,16 @@ def test_gdelt_news_is_normalized_without_newsapi_key(monkeypatch):
     assert article["title"] == "Company reports quarterly results"
     assert article["publishedAt"] == "2026-06-01T12:00:00Z"
     assert article["source"]["name"] == "example.com"
+
+
+def test_sec_evidence_links_open_human_readable_company_and_filing_pages():
+    from workbridge.tools import _sec_company_url, _sec_filing_url
+
+    assert _sec_company_url("0000789019") == (
+        "https://www.sec.gov/edgar/browse/?CIK=789019&owner=exclude"
+    )
+    assert _sec_filing_url("0000789019", "0000950170-26-000123") == (
+        "https://www.sec.gov/Archives/edgar/data/789019/000095017026000123/"
+    )
+    assert _sec_filing_url("0000789019", None) == _sec_company_url("0000789019")
+    assert _sec_filing_url("0000789019", "invalid") == _sec_company_url("0000789019")
