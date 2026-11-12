@@ -296,17 +296,16 @@ class NewsProvider(HttpProvider):
             "TESLA": "TSLA", "AMAZON": "AMZN", "GOOGLE": "GOOGL",
             "ALPHABET": "GOOGL", "META": "META",
         }
-        tokens = re.findall(r"[A-Z]{1,5}", query)
-        excluded = {"THE", "AND", "FOR", "WITH", "FROM", "WHAT", "HOW", "STOCK", "STOCKS", "NEWS", "LATEST", "ANALYZE", "ANALYSIS", "PRICE", "PERFORMANCE", "COMPANY", "SHARE", "SHARES", "ABOUT", "OF", "ON", "IS"}
-        for token in tokens:
-            if token in aliases:
-                return aliases[token]
-            if token not in excluded:
-                return token
         for name, ticker in aliases.items():
-            if name.lower() in query.lower():
+            if re.search(rf"\\b{name}\\b", query, re.IGNORECASE):
                 return ticker
-        return None
+        tokens = re.findall(r"\\b[A-Z]{2,5}\\b", query)
+        excluded = {
+            "THE", "AND", "FOR", "WITH", "FROM", "WHAT", "HOW", "STOCK",
+            "STOCKS", "NEWS", "LATEST", "ANALYZE", "ANALYSIS", "PRICE",
+            "PERFORMANCE", "COMPANY", "SHARE", "SHARES", "ABOUT", "OF", "ON", "IS",
+        }
+        return next((token for token in tokens if token not in excluded), None)
 
     @staticmethod
     def _deduplicate(articles: list[dict[str, Any]], limit: int) -> list[dict[str, Any]]:
