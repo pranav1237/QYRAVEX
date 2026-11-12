@@ -83,7 +83,7 @@ def synthesize(
     # Keep the Evidence Register scoped to the actual research terms, not every tool output.
     evidence = [
         item for result in observations for item in result.evidence
-        if _matches_research_query(" ".join((item.statement, item.entity or "", item.source)), question)
+        if result.tool == "news_search" or _matches_research_query(" ".join((item.statement, item.entity or "", item.source)), question)
     ]
     conflicts = detect_conflicts(evidence)
     findings: list[str] = []
@@ -130,15 +130,7 @@ def synthesize(
                 news_payload.get("provider", "public news search")
                 if isinstance(news_payload, dict) else "public news search"
             )
-            articles = [
-                article for article in articles
-                if _matches_research_query(" ".join((
-                    str(article.get("title", "")),
-                    str(article.get("description") or ""),
-                    str(article.get("source", {}).get("name", "")),
-                )), question)
-            ]
-            if articles:
+            # The news provider already searched the full query; keep all returned articles.\n            if articles:
                 headlines = [
                     f"{item.get('title', 'Untitled')} "
                     f"({item.get('source', {}).get('name', 'publisher')})"
