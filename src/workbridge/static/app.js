@@ -108,8 +108,20 @@ function renderReport(data) {
   const findings = report.findings || [];
   $("#findings-list").innerHTML = findings.map(item => `<div class="finding">${escapeHtml(item)}</div>`).join("") || '<div class="empty-state">No findings available.</div>';
   const stockStep = (data.plan?.steps || []).find(step => step.tool === "technical_summary");
-  if (stockStep?.args?.symbol) loadMarketChart(stockStep.args.symbol, "1y");
-  else { const chart = $("#stock-visualizer"); if (chart) chart.hidden = true; activeChartSymbol = null; activeChartData = null; }
+  const question = String(report.question || "");
+  const alias = {
+    APPLE: "AAPL", MICROSOFT: "MSFT", NVIDIA: "NVDA", TESLA: "TSLA",
+    AMAZON: "AMZN", GOOGLE: "GOOGL", ALPHABET: "GOOGL", META: "META"
+  };
+  const companyMatch = Object.entries(alias).find(([name]) => new RegExp("\\\\b" + name + "\\\\b", "i").test(question));
+  const tickerMatch = question.match(/\\b[A-Z]{1,5}\\b/);
+  const symbol = stockStep?.args?.symbol || companyMatch?.[1] && alias[companyMatch[1]] || tickerMatch?.[0];
+  if (symbol) loadMarketChart(symbol, "1y");
+  else {
+    const chart = $("#stock-visualizer");
+    if (chart) chart.hidden = true;
+    activeChartSymbol = null; activeChartData = null; activeChartQuote = null;
+  }
   $("#results").scrollIntoView({behavior:"smooth",block:"start"});
 }
 
@@ -117,8 +129,9 @@ let activeChartSymbol = null;
 let activeChartPeriod = "1y";
 let activeChartData = null;
 let activeChartCurrency = "USD";
+let activeChartQuote = null;
 
-function drawStockChart(points, currency) {
+function drawStockChart(points, currency, liveQuote = activeChartQuote) {
   const canvas = $("#stock-chart");
   if (!canvas || !points?.length) return;
   const rect = canvas.getBoundingClientRect();
@@ -173,7 +186,8 @@ function drawStockChart(points, currency) {
   const change = (Number(last.close) / Number(first.close) - 1) * 100;
   const money = value => new Intl.NumberFormat(undefined, {style:"currency",currency:currency || "USD",maximumFractionDigits:2}).format(value);
   $("#stock-chart-summary").innerHTML =
-    `<span>Latest close <b>${escapeHtml(money(last.close))}</b></span><span>Period change <b>${change >= 0 ? "+" : ""}${change.toFixed(2)}%</b></span><span>${values.length} daily observations</span>`;
+    `<span>Latest close <b>${escapeHtml(money(last.close))}</b></span><span>Period change <b>${change >= 0 ? "+" : ""}${change.toFixed(2)}%</b></span><span>${values.length} daily observations</span>` +
+    (liveQuote?.price != null ? `<span>Live quote <b>${escapeHtml(money(liveQuote.price))}</b> · ${escapeHtml(liveQuote.change_percent ?? 0)}%</span>` : "");
 }
 
 async function loadMarketChart(symbol, period = activeChartPeriod) {
@@ -186,7 +200,8 @@ async function loadMarketChart(symbol, period = activeChartPeriod) {
     const data = await api(`/api/market/${encodeURIComponent(symbol)}?period=${encodeURIComponent(period)}`);
     activeChartData = data.points;
     activeChartCurrency = data.currency;
-    drawStockChart(activeChartData, activeChartCurrency);
+    activeChartQuote = data.live_quote || null;
+    drawStockChart(activeChartData, activeChartCurrency, activeChartQuote);
     const last = new Date(data.latest.timestamp * 1000).toLocaleString();
     $("#stock-chart-status").textContent = `${data.symbol} · ${data.provider} · ${period.toUpperCase()} · Latest observation ${last}`;
   } catch (error) {
@@ -205,7 +220,7 @@ $$("#stock-visualizer [data-chart-period]").forEach(button => {
   });
 });
 window.addEventListener("resize", () => {
-  if (activeChartData) drawStockChart(activeChartData, activeChartCurrency);
+  if (activeChartData) drawStockChart(activeChartData, activeChartCurrency, activeChartQuote);
 });
 
 async function runResearch() {
