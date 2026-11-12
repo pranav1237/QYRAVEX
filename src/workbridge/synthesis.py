@@ -130,7 +130,8 @@ def synthesize(
                 news_payload.get("provider", "public news search")
                 if isinstance(news_payload, dict) else "public news search"
             )
-            # The news provider already searched the full query; keep all returned articles.\n            if articles:
+            # The news provider already searched the full query; keep all returned articles.
+            if articles:
                 headlines = [
                     f"{item.get('title', 'Untitled')} "
                     f"({item.get('source', {}).get('name', 'publisher')})"
