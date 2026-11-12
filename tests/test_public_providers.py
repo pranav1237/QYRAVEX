@@ -64,3 +64,33 @@ def test_sec_evidence_links_open_human_readable_company_and_filing_pages():
     )
     assert _sec_filing_url("0000789019", None) == _sec_company_url("0000789019")
     assert _sec_filing_url("0000789019", "invalid") == _sec_company_url("0000789019")
+
+
+def test_finnhub_company_news_is_normalized(monkeypatch):
+    from types import SimpleNamespace
+
+    import workbridge.providers as providers_module
+
+    monkeypatch.setattr(
+        providers_module,
+        "settings",
+        SimpleNamespace(finnhub_api_key="test-token"),
+    )
+    provider = NewsProvider()
+    monkeypatch.setattr(
+        provider,
+        "get_json",
+        lambda *args, **kwargs: [{
+            "headline": "Example company expands cloud business",
+            "summary": "Company news summary",
+            "datetime": 1794484800,
+            "url": "https://example.com/company-news",
+            "source": "Example Wire",
+        }],
+    )
+
+    result = provider._finnhub_company_news("MSFT", 10)
+    assert result["provider"] == "Finnhub Company News"
+    assert result["articles"][0]["title"] == "Example company expands cloud business"
+    assert result["articles"][0]["url"] == "https://example.com/company-news"
+    assert result["articles"][0]["source"]["name"] == "Example Wire"
