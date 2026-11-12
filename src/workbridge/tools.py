@@ -7,7 +7,7 @@ import time
 from collections.abc import Callable
 from typing import Any
 
-from .config import settings
+from .config import refresh_optional_api_keys, settings
 from .memory import MemoryStore
 from .models import Evidence, ToolResult
 from .providers import MacroProvider, MarketProvider, NewsProvider, ProviderError, SecProvider
@@ -280,6 +280,7 @@ class ToolRegistry:
         return ToolResult(tool="compare_entities", success=True, data=grouped)
 
     def source_health(self) -> ToolResult:
+        refresh_optional_api_keys()
         data = {
             "sec_edgar": True,
             "market_data_yahoo_stooq": True,
