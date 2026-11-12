@@ -14,7 +14,7 @@ from urllib.parse import quote
 
 import httpx
 
-from .config import settings
+from .config import refresh_optional_api_keys, settings
 
 
 class ProviderError(RuntimeError):
@@ -182,6 +182,7 @@ class MarketProvider(HttpProvider):
             ) from stooq_error
 
     def quote(self, symbol: str) -> dict[str, Any]:
+        refresh_optional_api_keys()
         if not settings.finnhub_api_key:
             raise ProviderError("Optional FINNHUB_API_KEY is not configured")
         data = self.get_json(
@@ -194,6 +195,7 @@ class MarketProvider(HttpProvider):
         return data
 
     def profile(self, symbol: str) -> dict[str, Any]:
+        refresh_optional_api_keys()
         if not settings.finnhub_api_key:
             raise ProviderError("Optional FINNHUB_API_KEY is not configured")
         return self.get_json(
@@ -228,6 +230,7 @@ class NewsProvider(HttpProvider):
     cache_ttl_seconds = 180
 
     def search(self, query: str, page_size: int = 30) -> dict[str, Any]:
+        refresh_optional_api_keys()
         normalized_query = " ".join(query.split()).casefold()
         limit = min(max(page_size, 1), 50)
         cache_key = f"{normalized_query}:{limit}"
@@ -410,6 +413,7 @@ class NewsProvider(HttpProvider):
                 "source": "Yahoo Finance RSS", "provider": "Yahoo Finance RSS"}
 
     def _finnhub_company_news(self, ticker: str, page_size: int) -> dict[str, Any]:
+        refresh_optional_api_keys()
         if not settings.finnhub_api_key:
             raise ProviderError("Optional FINNHUB_API_KEY is not configured")
         end = datetime.now(UTC).date()
