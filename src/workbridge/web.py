@@ -112,18 +112,6 @@ def market_chart(symbol: str, period: str = "1y") -> dict[str, Any]:
         ]
         if len(points) < 2:
             raise ProviderError("Not enough daily price observations to draw a chart.")
-        return {
-            "symbol": ticker,
-            "currency": row.get("meta", {}).get("currency") or "USD",
-            "provider": row.get("meta", {}).get("dataProvider") or "Yahoo Finance",
-            "period": period,
-            "points": points,
-            "latest": points[-1],
-            "previous": points[-2],
-            "live_quote": live_quote,
-        }
-    except ProviderError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
         live_quote = None
         if settings.finnhub_api_key:
@@ -139,6 +127,19 @@ def market_chart(symbol: str, period: str = "1y") -> dict[str, Any]:
                     }
             except ProviderError:
                 live_quote = None
+
+        return {
+            "symbol": ticker,
+            "currency": row.get("meta", {}).get("currency") or "USD",
+            "provider": row.get("meta", {}).get("dataProvider") or "Yahoo Finance",
+            "period": period,
+            "points": points,
+            "latest": points[-1],
+            "previous": points[-2],
+            "live_quote": live_quote,
+        }
+    except ProviderError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @app.get("/api/history")
