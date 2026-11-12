@@ -25,3 +25,28 @@ body{background:radial-gradient(ellipse at 82% 0%,#142a36 0,transparent 34%),rad
 @media(max-width:700px){.sidebar{width:auto}.main{margin:0}.view{padding-top:30px}.results{margin-top:32px}.metric-card{padding:13px}.metric-card strong{font-size:23px}.output-panel{padding:17px}.execution-copy small{font-size:9px}}
 
 .limitation summary{cursor:pointer;list-style:none}.limitation summary::-webkit-details-marker{display:none}.limitation summary:after{content:"＋";float:right;color:#f3c779;margin-left:10px}.limitation[open] summary:after{content:"−"}.limitation-detail{margin:9px 0 0;padding-top:8px;border-top:1px solid #66502d;font:10px/1.6 var(--mono);overflow-wrap:anywhere;white-space:pre-wrap;color:#cbb58f}
+
+/* WorkBridge research workspace refinement */
+.page-heading{gap:28px}
+.page-heading h1{font-size:clamp(36px,4vw,54px);line-height:1.04;letter-spacing:-2.5px}
+.research-layout{grid-template-columns:minmax(0,1.8fr) minmax(280px,.78fr);gap:20px}
+.composer{position:relative;overflow:hidden}
+.composer:before{content:"";position:absolute;inset:0 0 auto;height:1px;background:linear-gradient(90deg,transparent,#6ee7b7aa,#8bbcff55,transparent)}
+.panel,.mini-panel{backdrop-filter:blur(14px)}
+.side-stack{gap:15px}
+.mini-panel{transition:transform .2s,border-color .2s}
+.mini-panel:hover{transform:translateY(-2px);border-color:#3b5d72}
+.results{max-width:1500px}
+.results-head{padding-bottom:14px;border-bottom:1px solid #25394e}
+.metric-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+.output-grid{grid-template-columns:minmax(0,1.25fr) minmax(320px,.85fr)}
+.output-panel,.evidence-panel,.findings-panel{box-shadow:0 12px 36px #0002}
+.evidence-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 22px}
+.evidence-item{min-width:0}
+.evidence-item a{color:#85e5c1;text-decoration:none}
+.evidence-item a:hover{text-decoration:underline}
+.findings-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 24px}
+.finding{border-left:2px solid #4b9e80;padding:8px 12px;background:#112031;border-radius:0 8px 8px 0;line-height:1.7}
+.execution-item.failure{background:#241e1d55}
+@media(max-width:1050px){.research-layout{grid-template-columns:1fr}.output-grid{grid-template-columns:1fr}.evidence-list,.findings-list{grid-template-columns:1fr}}
+@media(max-width:700px){.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.page-heading h1{font-size:34px}.composer{padding:18px}}
