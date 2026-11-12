@@ -73,7 +73,7 @@ function renderReport(data) {
   const limitations = report.limitations || [];
   $("#limitations").innerHTML = limitations.length ? limitations.map(item => {
     const raw = String(item);
-    const friendly = raw.includes("429") ? "Market data provider is temporarily rate limiting requests. Retry later; SEC filings and reported financials may still be available."
+    const friendly = raw.includes("429") || raw.includes("cooldown active") ? "Market data is temporarily rate-limited across providers. WorkBridge will use cached results when available; SEC filings and reported financials remain independent."
       : raw.includes("API_KEY") || raw.includes("not configured") ? "An optional data source is not configured. Add its API key to enable this enrichment."
       : raw.startsWith("Optional sources not configured:") ? raw
       : raw.length > 190 ? raw.slice(0, 187) + "…"
@@ -83,7 +83,7 @@ function renderReport(data) {
   const observations = data.observations || [];
   $("#execution-list").innerHTML = observations.length ? observations.map(item => {
     const rawError = String(item.error || "");
-    const shortError = rawError.includes("429") ? "Rate limited by market-data provider"
+    const shortError = rawError.includes("429") || rawError.includes("cooldown active") ? "Market providers rate-limited · fallback exhausted"
       : rawError.includes("API_KEY") ? "API key missing"
       : rawError.includes("not configured") ? "Provider not configured"
       : rawError.includes("Skipped:") ? "Skipped · prerequisite unavailable"
