@@ -107,8 +107,99 @@ function renderReport(data) {
   ).join("") : '<div class="empty-state">No source-backed evidence was collected in this run. Review limitations and provider availability above.</div>';
   const findings = report.findings || [];
   $("#findings-list").innerHTML = findings.map(item => `<div class="finding">${escapeHtml(item)}</div>`).join("") || '<div class="empty-state">No findings available.</div>';
+  const stockStep = (data.plan?.steps || []).find(step => step.tool === "technical_summary");
+  if (stockStep?.args?.symbol) loadMarketChart(stockStep.args.symbol, "1y");
+  else { const chart = $("#stock-visualizer"); if (chart) chart.hidden = true; }
   $("#results").scrollIntoView({behavior:"smooth",block:"start"});
 }
+
+let activeChartSymbol = null;
+let activeChartPeriod = "1y";
+
+function drawStockChart(points, currency) {
+  const canvas = $("#stock-chart");
+  if (!canvas || !points?.length) return;
+  const rect = canvas.getBoundingClientRect();
+  const ratio = window.devicePixelRatio || 1;
+  const width = Math.max(320, rect.width);
+  const height = Math.max(180, rect.height);
+  canvas.width = Math.round(width * ratio);
+  canvas.height = Math.round(height * ratio);
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  ctx.clearRect(0, 0, width, height);
+  const values = points.map(point => Number(point.close)).filter(Number.isFinite);
+  if (values.length < 2) return;
+  const left = 58, right = 14, top = 14, bottom = 28;
+  const min = Math.min(...values), max = Math.max(...values);
+  const spread = max - min || Math.max(Math.abs(max) * 0.02, 1);
+  const low = min - spread * 0.08, high = max + spread * 0.08;
+  const x = index => left + index * (width - left - right) / (values.length - 1);
+  const y = value => top + (high - value) * (height - top - bottom) / (high - low);
+  const style = getComputedStyle(document.documentElement);
+  const lineColor = style.getPropertyValue("--green").trim() || "#176b4b";
+  const gridColor = style.getPropertyValue("--line").trim() || "#e0e9df";
+  ctx.font = "10px DM Mono, monospace";
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+  for (let i = 0; i <= 4; i++) {
+    const value = high - (high - low) * i / 4;
+    const py = y(value);
+    ctx.beginPath(); ctx.moveTo(left, py); ctx.lineTo(width - right, py);
+    ctx.strokeStyle = gridColor; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = "#879187";
+    ctx.fillText(new Intl.NumberFormat(undefined, {maximumFractionDigits: 2}).format(value), left - 8, py);
+  }
+  const gradient = ctx.createLinearGradient(0, top, 0, height - bottom);
+  gradient.addColorStop(0, lineColor + "30");
+  gradient.addColorStop(1, lineColor + "00");
+  ctx.beginPath();
+  values.forEach((value, index) => index ? ctx.lineTo(x(index), y(value)) : ctx.moveTo(x(index), y(value)));
+  ctx.lineTo(x(values.length - 1), height - bottom);
+  ctx.lineTo(x(0), height - bottom);
+  ctx.closePath(); ctx.fillStyle = gradient; ctx.fill();
+  ctx.beginPath();
+  values.forEach((value, index) => index ? ctx.lineTo(x(index), y(value)) : ctx.moveTo(x(index), y(value)));
+  ctx.strokeStyle = lineColor; ctx.lineWidth = 2.2; ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.stroke();
+  const first = points[0], last = points[points.length - 1];
+  const startDate = new Date(first.timestamp * 1000);
+  const endDate = new Date(last.timestamp * 1000);
+  ctx.fillStyle = "#879187"; ctx.textAlign = "left";
+  ctx.fillText(startDate.toLocaleDateString(), left, height - 9);
+  ctx.textAlign = "right";
+  ctx.fillText(endDate.toLocaleDateString(), width - right, height - 9);
+  const change = (Number(last.close) / Number(first.close) - 1) * 100;
+  const money = value => new Intl.NumberFormat(undefined, {style:"currency",currency:currency || "USD",maximumFractionDigits:2}).format(value);
+  $("#stock-chart-summary").innerHTML =
+    `<span>Latest close <b>${escapeHtml(money(last.close))}</b></span><span>Period change <b>${change >= 0 ? "+" : ""}${change.toFixed(2)}%</b></span><span>${values.length} daily observations</span>`;
+}
+
+async function loadMarketChart(symbol, period = activeChartPeriod) {
+  activeChartSymbol = symbol;
+  activeChartPeriod = period;
+  const panel = $("#stock-visualizer");
+  panel.hidden = false;
+  $("#stock-chart-status").textContent = `Loading ${symbol} live daily prices…`;
+  try {
+    const data = await api(`/api/market/${encodeURIComponent(symbol)}?period=${encodeURIComponent(period)}`);
+    drawStockChart(data.points, data.currency);
+    const last = new Date(data.latest.timestamp * 1000).toLocaleString();
+    $("#stock-chart-status").textContent = `${data.symbol} · ${data.provider} · ${period.toUpperCase()} · Latest observation ${last}`;
+  } catch (error) {
+    $("#stock-chart-status").textContent = `Market chart unavailable: ${error.message}`;
+    $("#stock-chart-summary").textContent = "No chart was drawn because live price observations could not be retrieved.";
+  }
+}
+
+$("#stock-visualizer [data-chart-period]").forEach(button => {
+  button.addEventListener("click", () => {
+    if (activeChartSymbol) loadMarketChart(activeChartSymbol, button.dataset.chartPeriod);
+  });
+});
+window.addEventListener("resize", () => {
+  if (activeChartSymbol) loadMarketChart(activeChartSymbol, activeChartPeriod);
+});
+
 async function runResearch() {
   const question = $("#question").value.trim();
   if (question.length < 4) { toast("Enter a longer research question."); return; }
