@@ -126,12 +126,12 @@ def test_news_synthesis_still_accepts_legacy_article_list():
             tool="news_search",
             success=True,
             data=[
-                {"title": "Legacy headline", "source": {"name": "Publisher"}}
+                {"title": "Example Corp legacy headline", "source": {"name": "Publisher"}}
             ],
         )
     ]
     report = synthesize("Research Example Corp", observations, {})
-    assert any("Legacy headline" in finding for finding in report.findings)
+    assert any("Example Corp legacy headline" in finding for finding in report.findings)
 
 
 
