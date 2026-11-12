@@ -56,3 +56,43 @@ def test_news_search_caches_recent_fallback_response(monkeypatch):
     assert first["provider"] == "Google News RSS"
     assert second["cached"] is True
     assert calls["rss"] == 1
+
+
+
+def test_news_aggregates_independent_public_sources_and_deduplicates(monkeypatch):
+    provider = NewsProvider()
+    rss = """<rss><channel><item>
+      <title>Microsoft shares rise after earnings</title>
+      <link>https://publisher.example/microsoft-earnings</link>
+      <pubDate>Thu, 12 Nov 2026 10:00:00 GMT</pubDate>
+      <source>Publisher</source>
+    </item></channel></rss>"""
+
+    def gdelt(*args, **kwargs):
+        return {"articles": [{
+            "title": "Microsoft shares rise after earnings",
+            "url": "https://publisher.example/microsoft-earnings",
+            "domain": "publisher.example",
+            "seendate": "20261112T100000Z",
+        }, {
+            "title": "Microsoft announces AI expansion",
+            "url": "https://publisher.example/microsoft-ai",
+            "domain": "publisher.example",
+            "seendate": "20261112T090000Z",
+        }]}
+
+    monkeypatch.setattr(provider, "get_json", gdelt)
+    monkeypatch.setattr(provider, "get_text", lambda *args, **kwargs: rss)
+    result = provider.search("Microsoft", page_size=20)
+
+    assert "GDELT DOC 2.0" in result["providers"]
+    assert "Google News RSS" in result["providers"]
+    assert "Yahoo Finance RSS" in result["providers"]
+    assert len(result["articles"]) == 2
+    assert result["articles"][0]["url"].startswith("https://")
+
+
+def test_ticker_detection_does_not_treat_sentence_initials_as_tickers():
+    assert NewsProvider._ticker_from_query("Example company stock news") is None
+    assert NewsProvider._ticker_from_query("Analyze MSFT stock") == "MSFT"
+    assert NewsProvider._ticker_from_query("Latest news about Apple") == "AAPL"
