@@ -120,9 +120,25 @@ def market_chart(symbol: str, period: str = "1y") -> dict[str, Any]:
             "points": points,
             "latest": points[-1],
             "previous": points[-2],
+            "live_quote": live_quote,
         }
     except ProviderError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+        live_quote = None
+        if settings.finnhub_api_key:
+            try:
+                quote_data = MarketProvider().quote(ticker)
+                if quote_data.get("c") is not None:
+                    live_quote = {
+                        "price": quote_data.get("c"),
+                        "change": quote_data.get("d"),
+                        "change_percent": quote_data.get("dp"),
+                        "timestamp": quote_data.get("t"),
+                        "provider": "Finnhub",
+                    }
+            except ProviderError:
+                live_quote = None
 
 
 @app.get("/api/history")
