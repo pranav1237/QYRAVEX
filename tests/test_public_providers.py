@@ -74,7 +74,7 @@ def test_finnhub_company_news_is_normalized(monkeypatch):
     monkeypatch.setattr(
         providers_module,
         "settings",
-        SimpleNamespace(finnhub_api_key="test-token"),
+        SimpleNamespace(finnhub_api_key="test-token", timeout_seconds=20),
     )
     provider = NewsProvider()
     monkeypatch.setattr(
