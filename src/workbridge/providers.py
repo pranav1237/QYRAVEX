@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import csv
 import io
+import re
 import threading
 import time
 import xml.etree.ElementTree as ET
@@ -296,7 +297,7 @@ class NewsProvider(HttpProvider):
             "ALPHABET": "GOOGL", "META": "META",
         }
         tokens = __import__("re").findall(r"\\b[A-Z]{1,5}\\b", query.upper())
-        excluded = {"THE", "AND", "FOR", "WITH", "FROM", "WHAT", "HOW", "STOCK", "NEWS", "LATEST"}
+        excluded = {"THE", "AND", "FOR", "WITH", "FROM", "WHAT", "HOW", "STOCK", "STOCKS", "NEWS", "LATEST", "ANALYZE", "ANALYSIS", "PRICE", "PERFORMANCE", "COMPANY", "SHARE", "SHARES", "ABOUT", "OF", "ON", "IS"}
         for token in tokens:
             if token in aliases:
                 return aliases[token]
