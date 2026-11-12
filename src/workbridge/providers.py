@@ -205,56 +205,96 @@ class MacroProvider(HttpProvider):
 
 
 class NewsProvider(HttpProvider):
-    """GDELT first, Google News RSS fallback; both are public live news indexes."""
+    """Live news search with GDELT primary, Google News RSS fallback and a short cache."""
+
+    _cache: dict[str, tuple[float, dict[str, Any]]] = {}
+    _cache_lock = threading.Lock()
+    cache_ttl_seconds = 300
 
     def search(self, query: str, page_size: int = 10) -> dict[str, Any]:
-        limit = min(max(page_size, 1), 50)
+        normalized_query = " ".join(query.split()).casefold()
+        cache_key = f"{normalized_query}:{min(max(page_size, 1), 50)}"
+        now = time.time()
+        with self._cache_lock:
+            cached = self._cache.get(cache_key)
+            if cached and now - cached[0] < self.cache_ttl_seconds:
+                result = dict(cached[1])
+                result["cached"] = True
+                return result
+
         try:
             data = self.get_json(
                 "https://api.gdeltproject.org/api/v2/doc/doc",
                 params={"query": query, "mode": "ArtList", "format": "json",
-                        "maxrecords": limit, "sort": "DateDesc"},
+                        "maxrecords": min(max(page_size, 1), 50), "sort": "DateDesc"},
                 retries=0,
             )
-            normalized = []
-            for article in data.get("articles", []):
-                seen = article.get("seendate", "")
-                published = (
-                    f"{seen[:4]}-{seen[4:6]}-{seen[6:8]}T{seen[9:11]}:{seen[11:13]}:{seen[13:15]}Z"
-                    if len(seen) >= 15 and seen[8:9] == "T" else None
-                )
-                normalized.append({
-                    "title": article.get("title", "Untitled article"),
-                    "description": article.get("socialimage") or article.get("domain"),
-                    "publishedAt": published, "url": article.get("url"),
-                    "source": {"name": article.get("domain") or "GDELT-indexed publisher"},
-                })
-            return {"articles": normalized, "source": "GDELT DOC 2.0"}
+            articles = self._normalize_gdelt(data.get("articles", []))
+            if not articles:
+                raise ProviderError("GDELT returned no matching articles")
+            result = {"articles": articles, "source": "GDELT DOC 2.0",
+                      "provider": "GDELT DOC 2.0", "fallback_used": False}
         except ProviderError as gdelt_error:
-            # GDELT can throttle shared/public IPs. Fall back immediately rather
-            # than retrying a known 429 and amplifying the rate limit.
-            try:
-                xml_text = self.get_text(
-                    "https://news.google.com/rss/search",
-                    params={"q": query, "hl": "en-US", "gl": "US", "ceid": "US:en"},
-                    retries=0,
-                )
-                root = ET.fromstring(xml_text)
-                articles = []
-                for item in root.findall("./channel/item")[:limit]:
-                    source = item.findtext("source") or "Google News publisher"
-                    articles.append({
-                        "title": item.findtext("title") or "Untitled article",
-                        "description": source,
-                        "publishedAt": item.findtext("pubDate"),
-                        "url": item.findtext("link"),
-                        "source": {"name": source},
-                    })
-                if articles:
-                    return {"articles": articles, "source": "Google News RSS",
-                            "fallback_reason": str(gdelt_error)}
-                raise ProviderError("Google News RSS returned no matching articles")
-            except (ProviderError, ET.ParseError) as fallback_error:
-                raise ProviderError(
-                    f"GDELT unavailable ({gdelt_error}); Google News RSS fallback unavailable ({fallback_error})"
-                ) from fallback_error
+            result = self._google_news_rss(query, page_size)
+            result["fallback_used"] = True
+            result["fallback_reason"] = f"GDELT unavailable: {gdelt_error}"
+
+        with self._cache_lock:
+            self._cache[cache_key] = (time.time(), result)
+        return result
+
+    @staticmethod
+    def _normalize_gdelt(articles: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        normalized = []
+        for article in articles:
+            seen = article.get("seendate", "")
+            published = (
+                f"{seen[:4]}-{seen[4:6]}-{seen[6:8]}T{seen[9:11]}:{seen[11:13]}:{seen[13:15]}Z"
+                if len(seen) >= 15 and seen[8:9] == "T" else None
+            )
+            normalized.append({
+                "title": article.get("title", "Untitled article"),
+                "description": article.get("socialimage") or article.get("domain"),
+                "publishedAt": published, "url": article.get("url"),
+                "source": {"name": article.get("domain") or "GDELT-indexed publisher"},
+            })
+        return normalized
+
+    def _google_news_rss(self, query: str, page_size: int) -> dict[str, Any]:
+        response = self.get_text(
+            "https://news.google.com/rss/search",
+            params={"q": query, "hl": "en-US", "gl": "US", "ceid": "US:en"},
+            headers={"Accept": "application/rss+xml, application/xml, text/xml"},
+            retries=0,
+        )
+        try:
+            root = ET.fromstring(response)
+        except ET.ParseError as exc:
+            raise ProviderError(f"Google News RSS returned invalid XML: {exc}") from exc
+
+        articles = []
+        for item in root.findall(".//item")[:min(max(page_size, 1), 50)]:
+            title = item.findtext("title") or "Untitled article"
+            link = item.findtext("link")
+            pub_date = item.findtext("pubDate")
+            source_node = item.find("source")
+            source_name = (
+                source_node.text if source_node is not None and source_node.text
+                else "Google News publisher"
+            )
+            published = None
+            if pub_date:
+                try:
+                    published = parsedate_to_datetime(pub_date).astimezone(UTC).isoformat()
+                except (TypeError, ValueError, OverflowError):
+                    published = pub_date
+            if link:
+                articles.append({
+                    "title": title, "description": None, "publishedAt": published,
+                    "url": link, "source": {"name": source_name},
+                })
+        if not articles:
+            raise ProviderError("Google News RSS returned no matching articles")
+        return {"articles": articles, "source": "Google News RSS",
+                "provider": "Google News RSS"}
+
