@@ -1,8 +1,8 @@
 """Evidence-aware synthesis, contradiction detection and report assembly."""
 from __future__ import annotations
 
-from collections import defaultdict
 import re
+from collections import defaultdict
 from datetime import UTC, datetime
 from typing import Any
 
@@ -64,7 +64,7 @@ def _query_relevance_terms(question: str) -> tuple[set[str], set[str]]:
 
 def _matches_research_query(text: str, question: str) -> bool:
     company_terms, topic_terms = _query_relevance_terms(question)
-    text_tokens = set(__import__("re").findall(r"[a-z0-9]+", text.casefold()))
+    text_tokens = set(re.findall(r"[a-z0-9]+", text.casefold()))
     expanded_text = set(text_tokens)
     for token in text_tokens:
         expanded_text.update(_COMPANY_ALIASES.get(token, set()))
