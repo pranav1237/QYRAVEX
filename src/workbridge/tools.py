@@ -239,14 +239,16 @@ class ToolRegistry:
                     article.get("url"), period=article.get("publishedAt")) for article in articles]
         warnings = []
         if data.get("fallback_used"):
-            warnings.append(
-                "GDELT was rate-limited or unavailable; live results were retrieved from "
-                "Google News RSS instead."
-            )
+            warnings.append("GDELT was unavailable; results were collected from other live news indexes.")
+        if data.get("partial_errors"):
+            warnings.append("Some news providers were unavailable: " + "; ".join(data["partial_errors"]))
+        if data.get("coverage_note"):
+            warnings.append(data["coverage_note"])
         if data.get("cached"):
-            warnings.append("Showing a recent live-news response cached for up to five minutes.")
+            warnings.append("Showing a recent live-news response cached for up to three minutes.")
         return ToolResult(tool="news_search", success=True, data={
-            "articles": articles, "provider": data.get("provider", "News provider")
+            "articles": articles, "provider": data.get("provider", "News provider"),
+            "providers": data.get("providers", []), "coverage_note": data.get("coverage_note"),
         }, evidence=evidence, warnings=warnings)
 
     def memory_search(self, query: str, limit: int = 8) -> ToolResult:
@@ -277,6 +279,14 @@ class ToolRegistry:
         return ToolResult(tool="compare_entities", success=True, data=grouped)
 
     def source_health(self) -> ToolResult:
-        data = {"sec_edgar": True, "market_data_yahoo_stooq": True,
-                "fred_public_data": True, "gdelt_public_news": True}
+        data = {
+            "sec_edgar": True,
+            "market_data_yahoo_stooq": True,
+            "fred_public_data": True,
+            "gdelt_public_news": True,
+            "google_news_rss": True,
+            "yahoo_finance_rss": True,
+            "newsapi_optional": bool(__import__("workbridge.config", fromlist=["settings"]).settings.newsapi_api_key),
+            "finnhub_optional": bool(__import__("workbridge.config", fromlist=["settings"]).settings.finnhub_api_key),
+        }
         return ToolResult(tool="source_health", success=True, data=data)
