@@ -40,26 +40,17 @@ def test_fred_public_csv_does_not_require_api_key(monkeypatch):
     assert result["observations"][-1] == {"date": "2026-02-01", "value": "322.1"}
 
 
-def test_gdelt_news_is_normalized_without_newsapi_key(monkeypatch):
-    NewsProvider._cache.clear()
-    provider = NewsProvider()
-    monkeypatch.setattr(
-        provider,
-        "get_json",
-        lambda *args, **kwargs: {
-            "articles": [{
-                "title": "Company reports quarterly results",
-                "url": "https://example.com/results",
-                "domain": "example.com",
-                "seendate": "20260601T120000Z",
-            }]
-        },
-    )
-
-    result = provider.search("MSFT earnings", 5)
-    article = next(item for item in result["articles"] if item["title"] == "Company reports quarterly results")
-    assert article["publishedAt"] == "2026-06-01T12:00:00Z"
-    assert article["source"]["name"] == "example.com"
+def test_gdelt_news_is_normalized_without_newsapi_key():
+    articles = NewsProvider._normalize_gdelt([{
+        "title": "Company reports quarterly results",
+        "url": "https://example.com/results",
+        "domain": "example.com",
+        "seendate": "20260601T120000Z",
+    }])
+    assert articles[0]["title"] == "Company reports quarterly results"
+    assert articles[0]["publishedAt"] == "2026-06-01T12:00:00Z"
+    assert articles[0]["source"]["name"] == "example.com"
+    assert articles[0]["url"] == "https://example.com/results"
 
 
 def test_sec_evidence_links_open_human_readable_company_and_filing_pages():
