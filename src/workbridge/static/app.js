@@ -80,8 +80,9 @@ function renderReport(data) {
       : raw.startsWith("Optional sources not configured:") ? ""
       : raw.length > 190 ? raw.slice(0, 187) + "…"
       : raw;
+    if (raw.startsWith("Optional sources not configured:")) return "";
     return `<details class="limitation"><summary>${escapeHtml(friendly)}</summary><p class="limitation-detail">${escapeHtml(raw)}</p></details>`;
-  }).join("") : '<div class="provider-note">No provider or parsing failures were recorded.</div>';
+  }).filter(Boolean).join("") || '<div class="provider-note">No required data sources are missing.</div>' : '<div class="provider-note">No provider or parsing failures were recorded.</div>';
   const observations = data.observations || [];
   $("#execution-list").innerHTML = observations.length ? observations.map(item => {
     const rawError = String(item.error || "");
