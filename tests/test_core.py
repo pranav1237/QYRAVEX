@@ -132,3 +132,69 @@ def test_news_synthesis_still_accepts_legacy_article_list():
     ]
     report = synthesize("Research Example Corp", observations, {})
     assert any("Legacy headline" in finding for finding in report.findings)
+
+
+
+def test_evidence_register_filters_records_to_specific_research_topic():
+    from workbridge.synthesis import _matches_research_query
+
+    assert _matches_research_query(
+        "Microsoft Corp AI investment announced new data centre",
+        "Microsoft AI investments",
+    )
+    assert not _matches_research_query(
+        "Microsoft Corp revenue reported as 245 billion USD",
+        "Microsoft AI investments",
+    )
+    assert _matches_research_query(
+        "Apple iPhone sales increased in latest quarter",
+        "AAPL iPhone sales",
+    )
+    assert not _matches_research_query(
+        "Apple total assets reported as 300 billion USD",
+        "AAPL iPhone sales",
+    )
+
+
+def test_news_findings_and_evidence_only_include_query_relevant_articles():
+    observations = [
+        ToolResult(
+            tool="news_search",
+            success=True,
+            data={
+                "provider": "Google News RSS",
+                "articles": [
+                    {
+                        "title": "Microsoft expands AI data centre investment",
+                        "source": {"name": "Tech Publisher"},
+                        "url": "https://example.com/microsoft-ai",
+                    },
+                    {
+                        "title": "Microsoft reports quarterly revenue",
+                        "source": {"name": "Finance Publisher"},
+                        "url": "https://example.com/microsoft-revenue",
+                    },
+                ],
+            },
+            evidence=[
+                Evidence(
+                    id="ai-1",
+                    statement="Microsoft expands AI data centre investment",
+                    source="Tech Publisher",
+                    source_url="https://example.com/microsoft-ai",
+                    entity="Microsoft",
+                ),
+                Evidence(
+                    id="revenue-1",
+                    statement="Microsoft revenue reported as 245 billion USD",
+                    source="Finance Publisher",
+                    source_url="https://example.com/microsoft-revenue",
+                    entity="Microsoft",
+                ),
+            ],
+        )
+    ]
+    report = synthesize("Microsoft AI investment", observations, {})
+    assert [item.id for item in report.evidence] == ["ai-1"]
+    assert any("Microsoft expands AI data centre investment" in item for item in report.findings)
+    assert not any("quarterly revenue" in item for item in report.findings)
