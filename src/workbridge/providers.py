@@ -263,6 +263,14 @@ class NewsProvider(HttpProvider):
             except ProviderError as exc:
                 errors.append(f"Yahoo Finance RSS: {exc}")
 
+        if ticker and settings.finnhub_api_key:
+            try:
+                found = self._finnhub_company_news(ticker, limit)["articles"]
+                articles.extend(found)
+                providers.append("Finnhub Company News")
+            except (ProviderError, ValueError, TypeError, KeyError, OverflowError) as exc:
+                errors.append(f"Finnhub Company News: {exc}")
+
         if settings.newsapi_api_key:
             try:
                 found = self._newsapi(query, limit)["articles"]
@@ -388,6 +396,30 @@ class NewsProvider(HttpProvider):
         )
         return {"articles": self._parse_rss(response, page_size, "Yahoo Finance"),
                 "source": "Yahoo Finance RSS", "provider": "Yahoo Finance RSS"}
+
+    def _finnhub_company_news(self, ticker: str, page_size: int) -> dict[str, Any]:
+        if not settings.finnhub_api_key:
+            raise ProviderError("Optional FINNHUB_API_KEY is not configured")
+        end = datetime.now(UTC).date()
+        start = end - timedelta(days=30)
+        data = self.get_json(
+            "https://finnhub.io/api/v1/company-news",
+            params={"symbol": ticker, "from": start.isoformat(), "to": end.isoformat(),
+                    "token": settings.finnhub_api_key},
+            retries=0,
+        )
+        articles = [{
+            "title": item.get("headline") or "Untitled article",
+            "description": item.get("summary"),
+            "publishedAt": datetime.fromtimestamp(int(item["datetime"]), UTC).isoformat()
+                if item.get("datetime") else None,
+            "url": item.get("url"),
+            "source": {"name": item.get("source") or "Finnhub"},
+        } for item in data if isinstance(item, dict) and item.get("url")]
+        if not articles:
+            raise ProviderError(f"Finnhub returned no company-news articles for {ticker}")
+        return {"articles": articles[:page_size], "source": "Finnhub Company News",
+                "provider": "Finnhub Company News"}
 
     def _newsapi(self, query: str, page_size: int) -> dict[str, Any]:
         data = self.get_json(
