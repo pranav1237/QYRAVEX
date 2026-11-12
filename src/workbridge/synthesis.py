@@ -70,18 +70,32 @@ def synthesize(
                 + "."
             )
         elif result.tool == "news_search":
-            articles = result.data or []
+            # Providers return a structured envelope: {articles, provider, ...}.
+            # Accept a legacy list as well so older cached observations remain readable.
+            news_payload = result.data or {}
+            articles = (
+                news_payload.get("articles", [])
+                if isinstance(news_payload, dict)
+                else news_payload if isinstance(news_payload, list) else []
+            )
+            provider_name = (
+                news_payload.get("provider", "public news search")
+                if isinstance(news_payload, dict) else "public news search"
+            )
             if articles:
                 headlines = [
-                    f"{item.get('title', 'Untitled')} ({item.get('source', {}).get('name', 'publisher')})"
-                    for item in articles[:3]
+                    f"{item.get('title', 'Untitled')} "
+                    f"({item.get('source', {}).get('name', 'publisher')})"
+                    for item in articles[:8]
                 ]
                 findings.append(
-                    f"Recent news context from public news search: {'; '.join(headlines)}. "
+                    f"Recent news context from {provider_name}: {'; '.join(headlines)}. "
                     "Headlines are leads for review, not independently verified facts."
                 )
             else:
-                limitations.append("GDELT returned no recent matching news articles for this query.")
+                limitations.append(
+                    f"{provider_name} returned no recent matching news articles for this query."
+                )
         elif result.tool == "macro_series" and result.data:
             latest = result.data[-1]
             findings.append(
