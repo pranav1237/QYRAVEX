@@ -39,7 +39,7 @@ async function loadStatus() {
     const active = Object.values(providers).filter(Boolean).length;
     $("#provider-count").textContent = `${active} public data sources supported`;
     $("#provider-list").innerHTML = Object.entries(providers).map(([name, enabled]) =>
-      `<div class="provider-row"><span>${escapeHtml(name.replaceAll("_"," ").toUpperCase())}</span><i class="${enabled ? "available" : "off"}">${enabled ? "Connected" : (name.includes("optional") ? "API key needed" : "Unavailable")}</i></div>`
+      `<div class="provider-row"><span>${escapeHtml(name.replaceAll("_"," ").toUpperCase())}</span><i class="${enabled ? "available" : "off"}">${enabled ? "Connected" : (name.includes("optional") ? "Optional · not enabled" : "Unavailable")}</i></div>`
     ).join("");
   } catch (error) {
     $("#system-status").textContent = "API unavailable";
@@ -77,7 +77,7 @@ function renderReport(data) {
     const friendly = (raw.includes("429") || raw.includes("cooldown active")) && isNewsLimit ? "News search was rate-limited. WorkBridge tries Google News RSS as a live alternative; the news section may be incomplete if both sources are unavailable."
       : raw.includes("429") || raw.includes("cooldown active") ? "Market data was rate-limited. WorkBridge tries Stooq as an alternate daily-price source; market metrics may be unavailable if both providers are unavailable."
       : raw.includes("API_KEY") || raw.includes("not configured") ? "An optional data source is not configured. Add its API key to enable this enrichment."
-      : raw.startsWith("Optional sources not configured:") ? raw
+      : raw.startsWith("Optional sources not configured:") ? ""
       : raw.length > 190 ? raw.slice(0, 187) + "…"
       : raw;
     return `<details class="limitation"><summary>${escapeHtml(friendly)}</summary><p class="limitation-detail">${escapeHtml(raw)}</p></details>`;
