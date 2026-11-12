@@ -45,7 +45,8 @@ class HttpProvider:
                  headers: dict[str, str] | None = None, retries: int = 1) -> httpx.Response:
         request_headers = {"User-Agent": "ZethetaWorkBridge/0.3 (financial research)"}
         request_headers.update(headers or {})
-        request = httpx.Request("GET", url, params=params, headers=request_headers)
+        request_url = httpx.URL(url).copy_merge_params(params or {})
+        request = httpx.Request("GET", request_url, headers=request_headers)
         cache_key = str(request.url)
         host = request.url.host or ""
         now = time.monotonic()
