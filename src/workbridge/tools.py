@@ -178,9 +178,14 @@ class ToolRegistry:
                 "annualized_volatility": volatility, "max_drawdown": max_dd,
                 "latest_close": closes[-1]}
         provider = raw.data.get("provider", "Yahoo Finance")
+        source_url = (
+            f"https://stooq.com/q/?s={symbol.lower()}.us"
+            if provider == "Stooq"
+            else f"https://finance.yahoo.com/quote/{symbol.upper()}"
+        )
         ev = _evidence("technical_summary", f"{symbol.upper()} price return over {period}: {data['period_return']:.2%}",
                        data, f"Calculated from {provider} daily close observations",
-                       f"https://finance.yahoo.com/quote/{symbol.upper()}", symbol.upper(), period)
+                       source_url, symbol.upper(), period)
         return ToolResult(tool="technical_summary", success=True, data=data, evidence=[ev])
 
     def company_profile(self, symbol: str) -> ToolResult:
@@ -203,9 +208,19 @@ class ToolRegistry:
         evidence = [_evidence("news_search", article.get("title", "Untitled article"),
                     {"description": article.get("description"), "publishedAt": article.get("publishedAt"),
                      "url": article.get("url"), "source": article.get("source", {}).get("name")},
-                    article.get("source", {}).get("name", "GDELT-indexed publisher"),
+                    article.get("source", {}).get("name", data.get("provider", "News publisher")),
                     article.get("url"), period=article.get("publishedAt")) for article in articles]
-        return ToolResult(tool="news_search", success=True, data=articles, evidence=evidence)
+        warnings = []
+        if data.get("fallback_used"):
+            warnings.append(
+                "GDELT was rate-limited or unavailable; live results were retrieved from "
+                "Google News RSS instead."
+            )
+        if data.get("cached"):
+            warnings.append("Showing a recent live-news response cached for up to five minutes.")
+        return ToolResult(tool="news_search", success=True, data={
+            "articles": articles, "provider": data.get("provider", "News provider")
+        }, evidence=evidence, warnings=warnings)
 
     def memory_search(self, query: str, limit: int = 8) -> ToolResult:
         items = self.memory.search(query, limit)
