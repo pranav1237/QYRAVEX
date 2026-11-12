@@ -109,12 +109,14 @@ function renderReport(data) {
   $("#findings-list").innerHTML = findings.map(item => `<div class="finding">${escapeHtml(item)}</div>`).join("") || '<div class="empty-state">No findings available.</div>';
   const stockStep = (data.plan?.steps || []).find(step => step.tool === "technical_summary");
   if (stockStep?.args?.symbol) loadMarketChart(stockStep.args.symbol, "1y");
-  else { const chart = $("#stock-visualizer"); if (chart) chart.hidden = true; }
+  else { const chart = $("#stock-visualizer"); if (chart) chart.hidden = true; activeChartSymbol = null; activeChartData = null; }
   $("#results").scrollIntoView({behavior:"smooth",block:"start"});
 }
 
 let activeChartSymbol = null;
 let activeChartPeriod = "1y";
+let activeChartData = null;
+let activeChartCurrency = "USD";
 
 function drawStockChart(points, currency) {
   const canvas = $("#stock-chart");
@@ -182,7 +184,9 @@ async function loadMarketChart(symbol, period = activeChartPeriod) {
   $("#stock-chart-status").textContent = `Loading ${symbol} live daily prices…`;
   try {
     const data = await api(`/api/market/${encodeURIComponent(symbol)}?period=${encodeURIComponent(period)}`);
-    drawStockChart(data.points, data.currency);
+    activeChartData = data.points;
+    activeChartCurrency = data.currency;
+    drawStockChart(activeChartData, activeChartCurrency);
     const last = new Date(data.latest.timestamp * 1000).toLocaleString();
     $("#stock-chart-status").textContent = `${data.symbol} · ${data.provider} · ${period.toUpperCase()} · Latest observation ${last}`;
   } catch (error) {
@@ -197,7 +201,7 @@ $("#stock-visualizer [data-chart-period]").forEach(button => {
   });
 });
 window.addEventListener("resize", () => {
-  if (activeChartSymbol) loadMarketChart(activeChartSymbol, activeChartPeriod);
+  if (activeChartData) drawStockChart(activeChartData, activeChartCurrency);
 });
 
 async function runResearch() {
