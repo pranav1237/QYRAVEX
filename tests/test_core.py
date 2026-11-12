@@ -156,7 +156,7 @@ def test_evidence_register_filters_records_to_specific_research_topic():
     )
 
 
-def test_news_findings_and_evidence_only_include_query_relevant_articles():
+def test_news_findings_and_evidence_preserve_articles_returned_for_search_query():
     observations = [
         ToolResult(
             tool="news_search",
@@ -195,6 +195,6 @@ def test_news_findings_and_evidence_only_include_query_relevant_articles():
         )
     ]
     report = synthesize("Microsoft AI investment", observations, {})
-    assert [item.id for item in report.evidence] == ["ai-1"]
+    assert [item.id for item in report.evidence] == ["ai-1", "revenue-1"]
     assert any("Microsoft expands AI data centre investment" in item for item in report.findings)
-    assert not any("quarterly revenue" in item for item in report.findings)
+    assert any("quarterly revenue" in item for item in report.findings)
