@@ -150,7 +150,10 @@ def synthesize(
                 "Check the series definition and release cadence before interpreting it."
             )
         elif result.tool == "source_health" and result.data:
-            unavailable = [key for key, available in result.data.items() if not available]
+            unavailable = [
+                key for key, available in result.data.items()
+                if not available and not key.endswith("_optional")
+            ]
             if unavailable:
                 limitations.append(
                     "Optional sources not configured: " + ", ".join(unavailable)
