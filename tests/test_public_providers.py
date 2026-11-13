@@ -24,6 +24,51 @@ def test_market_provider_falls_back_to_stooq_when_yahoo_is_rate_limited(monkeypa
     assert row["indicators"]["quote"][0]["close"] == [104.0, 107.0]
 
 
+
+def test_market_symbol_search_returns_exchange_and_source_metadata(monkeypatch):
+    provider = MarketProvider()
+    monkeypatch.setattr(provider, "get_json", lambda *args, **kwargs: {
+        "quotes": [{
+            "symbol": "SOUTHBANK.NS",
+            "shortname": "South Indian Bank Limited",
+            "exchDisp": "NSE",
+            "exch": "NSI",
+            "quoteType": "EQUITY",
+            "currency": "INR",
+        }]
+    })
+    matches = provider.search_symbols("South Indian Bank")
+    assert matches[0]["symbol"] == "SOUTHBANK.NS"
+    assert matches[0]["exchange"] == "NSE"
+    assert matches[0]["currency"] == "INR"
+    assert matches[0]["source_url"].endswith("/SOUTHBANK.NS")
+
+
+def test_market_provider_resolves_exchange_qualified_listing_after_bad_symbol(monkeypatch):
+    provider = MarketProvider()
+    calls = []
+
+    def fake_json(url, **kwargs):
+        calls.append(url)
+        if "/v8/finance/chart/SOUTH" in url:
+            raise ProviderError("404 Not Found")
+        if "/v1/finance/search" in url:
+            return {"quotes": [{
+                "symbol": "SOUTHBANK.NS", "shortname": "South Indian Bank",
+                "exchDisp": "NSE", "exch": "NSI", "quoteType": "EQUITY",
+            }]}
+        return {"chart": {"result": [{
+            "timestamp": [1794432000, 1794518400],
+            "meta": {"symbol": "SOUTHBANK.NS", "currency": "INR"},
+            "indicators": {"quote": [{"close": [25.0, 26.0]}]},
+        }]}}
+    monkeypatch.setattr(provider, "get_json", fake_json)
+    result = provider.price_history("SOUTH", "1mo")
+    row = result["chart"]["result"][0]
+    assert row["meta"]["symbol"] == "SOUTHBANK.NS"
+    assert row["meta"]["symbolSearch"]["exchange"] == "NSE"
+    assert row["indicators"]["quote"][0]["close"] == [25.0, 26.0]
+
 def test_fred_public_csv_does_not_require_api_key(monkeypatch):
     provider = MacroProvider()
     monkeypatch.setattr(
