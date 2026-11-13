@@ -66,6 +66,47 @@ def test_market_symbol_search_api_returns_verifiable_candidates(monkeypatch):
     assert payload["matches"][0]["exchange"] == "NSE"
     assert payload["matches"][0]["source_url"].startswith("https://finance.yahoo.com/")
 
+
+def test_market_forecast_returns_scenarios_and_linked_news(monkeypatch):
+    closes = [100.0 + index * 0.35 + (index % 5) * 0.08 for index in range(80)]
+    timestamps = [1790000000 + index * 86400 for index in range(len(closes))]
+    monkeypatch.setattr(
+        "workbridge.web.MarketProvider.price_history",
+        lambda self, symbol, period: {"chart": {"result": [{
+            "meta": {"symbol": "MSFT", "currency": "USD", "dataProvider": "Yahoo Finance",
+                     "longName": "Microsoft Corporation", "fullExchangeName": "Nasdaq"},
+            "timestamp": timestamps,
+            "indicators": {"quote": [{"close": closes}]},
+        }]}},
+    )
+    monkeypatch.setattr(
+        "workbridge.web.NewsProvider.search",
+        lambda self, query, page_size: {
+            "articles": [{
+                "title": "Microsoft reports strong growth and profit",
+                "publishedAt": "2026-11-12T12:00:00Z",
+                "url": "https://example.com/microsoft-results",
+                "source": {"name": "Example Financial News"},
+            }],
+            "providers": ["GDELT DOC 2.0"],
+            "coverage_note": "Indexed headlines only.",
+        },
+    )
+    response = client.get("/api/market/MSFT/forecast?horizon=20")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["symbol"] == "MSFT"
+    assert payload["horizon_trading_days"] == 20
+    assert payload["scenarios"]["bear"] < payload["scenarios"]["base"] < payload["scenarios"]["bull"]
+    assert payload["news"]["article_count"] == 1
+    assert payload["sources"][1]["url"] == "https://example.com/microsoft-results"
+    assert "not a guarantee" in payload["limitations"][0]
+
+
+def test_market_forecast_rejects_unsupported_horizon():
+    response = client.get("/api/market/MSFT/forecast?horizon=17")
+    assert response.status_code == 422
+
 def test_market_chart_api_rejects_invalid_period():
     response = client.get("/api/market/MSFT?period=intraday")
     assert response.status_code == 422
