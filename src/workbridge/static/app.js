@@ -300,7 +300,11 @@ async function loadMarketForecast(symbol, horizon = activeForecastHorizon) {
         '<span>20-session momentum <b>' + escapeHtml(percent(data.momentum_20d)) + '</b></span>' +
         '<span>60-session momentum <b>' + escapeHtml(percent(data.momentum_60d)) + '</b></span>' +
         '<span>Annualized volatility <b>' + escapeHtml((data.annualized_volatility * 100).toFixed(1)) + '%</b></span>' +
-        '<span>Data coverage score <b>' + Math.round(data.confidence_score * 100) + '%</b></span></div>' +
+        '<span>Data coverage score <b>' + Math.round(data.confidence_score * 100) + '%</b></span>' +
+        '<span>Historical direction hit rate <b>' +
+          (data.backtest?.directional_accuracy == null ? "Insufficient test samples" :
+            (data.backtest.directional_accuracy * 100).toFixed(1) + "% · " + data.backtest.samples + " tests") +
+        '</b></span></div>' +
       '<p class="forecast-note">' + escapeHtml(data.range_level) + '. ' + escapeHtml(data.confidence_note) + '</p>' +
       '<div class="forecast-evidence"><strong>News evidence (' + Number(news.article_count || 0) +
         ' indexed articles)</strong><span>Headline signal: ' +
