@@ -185,7 +185,11 @@ def market_forecast(symbol: str, horizon: int = 20) -> dict[str, Any]:
         resolved_symbol = meta.get("symbol") or ticker
         company = meta.get("longName") or meta.get("shortName") or resolved_symbol
         provider = meta.get("dataProvider") or "Yahoo Finance"
-        price_source = f"https://finance.yahoo.com/quote/{resolved_symbol}"
+        price_source = (
+            f"https://stooq.com/q/?s={resolved_symbol.lower()}.us"
+            if provider == "Stooq"
+            else f"https://finance.yahoo.com/quote/{resolved_symbol}"
+        )
         log_returns = [math.log(closes[index] / closes[index - 1]) for index in range(1, len(closes))]
         recent20, recent60, long_window = log_returns[-20:], log_returns[-60:], log_returns[-252:]
         mean20 = sum(recent20) / len(recent20)
