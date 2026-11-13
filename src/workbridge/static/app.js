@@ -127,7 +127,7 @@ function renderReport(data) {
   const symbol = stockStep?.args?.symbol
     || (companyMatch ? alias[companyMatch[1]] : null)
     || tickerMatch;
-  if (symbol) loadMarketChart(symbol, "1y");
+  if (symbol) loadMarketChart(symbol, "1y", question);
   else {
     const chart = $("#stock-visualizer");
     if (chart) chart.hidden = true;
@@ -201,23 +201,42 @@ function drawStockChart(points, currency, liveQuote = activeChartQuote) {
     (liveQuote?.price != null ? `<span>Live quote <b>${escapeHtml(money(liveQuote.price))}</b> · ${escapeHtml(liveQuote.change_percent ?? 0)}%</span>` : "");
 }
 
-async function loadMarketChart(symbol, period = activeChartPeriod) {
+async function loadMarketChart(symbol, period = activeChartPeriod, searchQuery = symbol) {
   activeChartSymbol = symbol;
   activeChartPeriod = period;
   const panel = $("#stock-visualizer");
   panel.hidden = false;
-  $("#stock-chart-status").textContent = `Loading ${symbol} live daily prices…`;
+  $("#stock-chart-status").textContent = `Verifying ${searchQuery} against the live symbol directory…`;
   try {
-    const data = await api(`/api/market/${encodeURIComponent(symbol)}?period=${encodeURIComponent(period)}`);
+    let resolvedSymbol = symbol;
+    let identity = null;
+    try {
+      const search = await api(`/api/market/search?q=${encodeURIComponent(searchQuery)}`);
+      const matches = search.matches || [];
+      const exact = matches.find(item => item.symbol.toUpperCase() === String(symbol).toUpperCase());
+      identity = exact || matches.find(item => item.quote_type === "EQUITY") || matches[0] || null;
+      if (identity) resolvedSymbol = identity.symbol;
+    } catch (lookupError) {
+      // A supplied exchange-qualified ticker can still be queried directly if
+      // the symbol directory is temporarily unavailable.
+      console.warn("Symbol directory lookup unavailable:", lookupError.message);
+    }
+    $("#stock-chart-status").textContent = `Loading verified listing ${resolvedSymbol}…`;
+    const data = await api(`/api/market/${encodeURIComponent(resolvedSymbol)}?period=${encodeURIComponent(period)}`);
+    activeChartSymbol = data.symbol || resolvedSymbol;
     activeChartData = data.points;
     activeChartCurrency = data.currency;
     activeChartQuote = data.live_quote || null;
     drawStockChart(activeChartData, activeChartCurrency, activeChartQuote);
     const last = new Date(data.latest.timestamp * 1000).toLocaleString();
-    $("#stock-chart-status").textContent = `${data.symbol} · ${data.provider} · ${period.toUpperCase()} · Latest observation ${last}`;
+    const company = data.company || identity?.name || "";
+    const exchange = data.exchange || identity?.exchange || "";
+    const sourceUrl = data.source_url || identity?.source_url || `https://finance.yahoo.com/quote/${encodeURIComponent(data.symbol)}`;
+    const status = $("#stock-chart-status");
+    status.innerHTML = `${company ? escapeHtml(company) + " · " : ""}${escapeHtml(data.symbol)}${exchange ? " · " + escapeHtml(exchange) : ""} · ${escapeHtml(data.provider)} · ${period.toUpperCase()} · Latest observation ${escapeHtml(last)} · <a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener">Verify source ↗</a>`;
   } catch (error) {
     $("#stock-chart-status").textContent = `Market chart unavailable: ${error.message}`;
-    $("#stock-chart-summary").textContent = "No chart was drawn because live price observations could not be retrieved.";
+    $("#stock-chart-summary").textContent = "No chart was drawn because live price observations could not be retrieved. Check the ticker and exchange, or search using the company's full name.";
   }
 }
 
