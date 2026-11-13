@@ -143,13 +143,21 @@ def market_chart(symbol: str, period: str = "1y") -> dict[str, Any]:
             except ProviderError:
                 live_quote = None
 
+        meta = row.get("meta", {})
+        resolved_symbol = meta.get("symbol") or ticker
+        data_provider = meta.get("dataProvider") or "Yahoo Finance"
+        source_url = (
+            f"https://stooq.com/q/?s={resolved_symbol.lower()}.us"
+            if data_provider == "Stooq"
+            else f"https://finance.yahoo.com/quote/{resolved_symbol}"
+        )
         return {
-            "symbol": row.get("meta", {}).get("symbol") or ticker,
-            "company": row.get("meta", {}).get("longName") or row.get("meta", {}).get("shortName"),
-            "exchange": row.get("meta", {}).get("fullExchangeName") or row.get("meta", {}).get("exchangeName"),
-            "currency": row.get("meta", {}).get("currency") or "USD",
-            "provider": row.get("meta", {}).get("dataProvider") or "Yahoo Finance",
-            "source_url": f"https://finance.yahoo.com/quote/{row.get('meta', {}).get('symbol') or ticker}",
+            "symbol": resolved_symbol,
+            "company": meta.get("longName") or meta.get("shortName"),
+            "exchange": meta.get("fullExchangeName") or meta.get("exchangeName"),
+            "currency": meta.get("currency") or "USD",
+            "provider": data_provider,
+            "source_url": source_url,
             "period": period,
             "points": points,
             "latest": points[-1],
