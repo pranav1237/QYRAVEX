@@ -94,3 +94,19 @@ body{background:radial-gradient(ellipse at 86% 3%,#dcebd7 0,transparent 28%),lin
 
 .forecast-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:10px;margin:0 0 10px}
 .forecast-legend span{white-space:nowrap}
+
+
+.forecast-ai-provider {
+  border-top: 1px solid var(--line, #e0e9df);
+  margin-top: 10px;
+  padding-top: 10px;
+}
+.forecast-ai-provider strong {
+  display: block;
+  margin-bottom: 5px;
+}
+.forecast-ai-provider p {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.55;
+}
