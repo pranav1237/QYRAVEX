@@ -49,3 +49,23 @@ body{background:radial-gradient(ellipse at 86% 3%,#dcebd7 0,transparent 28%),lin
 .result-state{border-radius:999px}.main-footer{border-color:#dfe8de}.toast{background:#173d2d;border-color:#47785a}
 @media(max-width:650px){.page-heading h1{letter-spacing:-1.7px}.metric-card:hover{transform:translateY(-2px)}}
 @media(prefers-reduced-motion:reduce){.o1,.o2,.orbit-core{animation:none!important}}
+
+
+/* QYRAVEX identity — isolated logo treatment; existing workspace styling is untouched */
+.brand{gap:12px;padding-bottom:54px}
+.brand-wordmark{font:700 17px/1 var(--display);letter-spacing:2.1px;color:#f7f6ef}
+.qyravex-mark{position:relative;width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center;perspective:180px;transform-style:preserve-3d}
+.qyravex-mark-core{position:absolute;width:22px;height:22px;border-radius:7px;background:linear-gradient(145deg,#f0facd 0%,#c9e77e 55%,#8dbd66 100%);border:1px solid #f4ffd7;box-shadow:0 5px 12px #081d1238,inset 1px 1px 2px #fff;transform:rotateX(52deg) rotateZ(45deg);animation:qyravex-cube 7s ease-in-out infinite}
+.qyravex-mark-orbit{position:absolute;width:35px;height:15px;border:1.4px solid #d9ed91;border-radius:50%;transform:rotate(-38deg) rotateX(58deg);box-shadow:0 0 9px #d9ed9140;animation:qyravex-orbit 9s linear infinite}
+.qyravex-mark-spark{position:absolute;width:5px;height:5px;right:1px;top:4px;border-radius:50%;background:#fff9dc;box-shadow:0 0 9px #d9ed91,0 0 17px #d9ed91;animation:qyravex-spark 2.8s ease-in-out infinite}
+@keyframes qyravex-cube{0%,100%{transform:rotateX(52deg) rotateZ(45deg) translateY(0)}50%{transform:rotateX(62deg) rotateZ(225deg) translateY(-2px)}}
+@keyframes qyravex-orbit{to{transform:rotate(322deg) rotateX(58deg)}}
+@keyframes qyravex-spark{0%,100%{opacity:.65;transform:scale(.8)}50%{opacity:1;transform:scale(1.35)}}
+.qyravex-hero-core{position:relative;overflow:visible;transform-style:preserve-3d;background:linear-gradient(145deg,#f2fbd5,#d9ed91 58%,#9fc86c);border:1px solid #f9ffe9;box-shadow:0 12px 25px #315e3828,inset 0 2px 3px #fff;animation:qyravex-hero-float 5.5s ease-in-out infinite}
+.qyravex-hero-core span{position:relative;z-index:2;font:800 23px/1 var(--display);letter-spacing:-2px;color:#183b2b;text-shadow:0 1px #fff8;transform:translateZ(9px)}
+.qyravex-hero-core:before,.qyravex-hero-core:after{content:"";position:absolute;inset:-9px;border:1px solid #a7c69c;border-radius:19px;transform:rotateX(62deg) rotateZ(35deg);animation:qyravex-hero-orbit 12s linear infinite}
+.qyravex-hero-core:after{inset:-15px;border-color:#c8d9a8;transform:rotateX(62deg) rotateZ(-35deg);animation-duration:16s;animation-direction:reverse}
+.qyravex-hero-core i{position:absolute;width:5px;height:5px;right:-11px;top:-7px;border-radius:50%;background:#e3f7a9;box-shadow:0 0 12px #a8d36c;animation:qyravex-spark 2.8s ease-in-out infinite}
+@keyframes qyravex-hero-float{0%,100%{transform:translateY(0) rotateY(-12deg) rotateX(8deg)}50%{transform:translateY(-6px) rotateY(12deg) rotateX(-5deg)}}
+@keyframes qyravex-hero-orbit{to{transform:rotateX(62deg) rotateZ(395deg)}}
+@media(prefers-reduced-motion:reduce){.qyravex-mark-core,.qyravex-mark-orbit,.qyravex-mark-spark,.qyravex-hero-core,.qyravex-hero-core:before,.qyravex-hero-core:after{animation:none!important}}
