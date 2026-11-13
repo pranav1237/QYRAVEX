@@ -439,16 +439,21 @@ class NewsProvider(HttpProvider):
         # Broad issuer-name searches avoid the false-negative behavior of an
         # exact quoted company phrase followed by unrelated prompt wording.
         search_queries = self._issuer_queries(query, ticker)
-        for alternate_query in search_queries:
-            if alternate_query.casefold() == query.casefold():
-                continue
-            try:
-                found = self._google_news_rss(alternate_query, limit)["articles"]
-                articles.extend(found)
-                providers.append("Google News RSS (issuer fallback)")
-                break
-            except ProviderError as exc:
-                errors.append(f"Google News RSS issuer fallback: {exc}")
+        # Google News is one provider, not multiple independent sources.
+        # Do not repeat the same RSS provider with alternate queries after it
+        # has already returned articles for the original query.
+        if not articles:
+            for alternate_query in search_queries:
+                if alternate_query.casefold() == query.casefold():
+                    continue
+                try:
+                    found = self._google_news_rss(alternate_query, limit)["articles"]
+                    articles.extend(found)
+                    providers.append("Google News RSS (issuer fallback)")
+                    if found:
+                        break
+                except ProviderError as exc:
+                    errors.append(f"Google News RSS issuer fallback: {exc}")
 
         # Bing News RSS is an additional public index; use the issuer's home
         # market for India-listed companies to avoid US-centric false negatives.
