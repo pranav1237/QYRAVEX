@@ -46,6 +46,26 @@ def test_market_chart_api_returns_timestamped_price_observations(monkeypatch):
     assert payload["latest"]["close"] == 101.5
 
 
+
+def test_market_symbol_search_api_returns_verifiable_candidates(monkeypatch):
+    monkeypatch.setattr(
+        "workbridge.web.MarketProvider.search_symbols",
+        lambda self, query: [{
+            "symbol": "SOUTHBANK.NS",
+            "name": "South Indian Bank Limited",
+            "exchange": "NSE",
+            "quote_type": "EQUITY",
+            "source": "Yahoo Finance symbol search",
+            "source_url": "https://finance.yahoo.com/quote/SOUTHBANK.NS",
+        }],
+    )
+    response = client.get("/api/market/search?q=South%20Indian%20Bank")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["matches"][0]["symbol"] == "SOUTHBANK.NS"
+    assert payload["matches"][0]["exchange"] == "NSE"
+    assert payload["matches"][0]["source_url"].startswith("https://finance.yahoo.com/")
+
 def test_market_chart_api_rejects_invalid_period():
     response = client.get("/api/market/MSFT?period=intraday")
     assert response.status_code == 422
