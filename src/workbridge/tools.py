@@ -4,9 +4,9 @@ from __future__ import annotations
 import hashlib
 import math
 import time
-from urllib.parse import quote
 from collections.abc import Callable
 from typing import Any
+from urllib.parse import quote
 
 from .config import refresh_optional_api_keys, settings
 from .memory import MemoryStore
