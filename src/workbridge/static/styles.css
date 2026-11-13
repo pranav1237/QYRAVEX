@@ -115,3 +115,11 @@ body{background:radial-gradient(ellipse at 86% 3%,#dcebd7 0,transparent 28%),lin
 #stock-visualizer{scroll-margin-top:22px}
 .execution-item.warning{background:#fff9ef;border-color:#f0dfc3}
 .execution-mark.warn{background:#fff0d9;color:#a96a25}
+
+/* Dedicated stock predictor page */
+.predictor-view .evidence-panel{width:100%;margin-bottom:28px}
+.predictor-view #stock-chart{display:block;width:100%;height:100%}
+.predictor-view #stock-forecast-chart{display:block;width:100%;height:100%}
+.predictor-view #stock-symbol-input{min-height:44px;padding:10px 13px;border:1px solid var(--line);border-radius:10px;background:var(--white);color:var(--ink)}
+.predictor-view #stock-symbol-input:focus{outline:3px solid #86a7ff;outline-offset:2px}
+@media(max-width:760px){.predictor-view .page-heading h1{letter-spacing:-2px}.predictor-view .panel-head{align-items:flex-start;flex-direction:column}.forecast-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
