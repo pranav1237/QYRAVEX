@@ -20,6 +20,8 @@ def test_dashboard_assets_are_served():
     assert "runResearch" in response.text
     assert "loadMarketForecast" in response.text
     assert "drawForecastChart" in response.text
+    assert 'const viewName = name === "predictor" ? "research" : name' not in response.text
+    assert 'const validViews = new Set(["research", "predictor", "history", "benchmarks"])' in response.text
 
     page = client.get("/")
     assert 'data-view="predictor"' in page.text
