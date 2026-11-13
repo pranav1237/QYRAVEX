@@ -92,7 +92,10 @@ function renderReport(data) {
   const observations = data.observations || [];
   $("#execution-list").innerHTML = observations.length ? observations.map(item => {
     const rawError = String(item.error || "");
-    const shortError = (rawError.includes("429") || rawError.includes("cooldown active")) && item.tool === "news_search" ? "News providers rate-limited · fallback exhausted"
+    const newsCoverageGap = item.tool === "news_search" &&
+      item.warnings?.some(warning => String(warning).includes("No matching indexed headlines"));
+    const shortError = newsCoverageGap ? "No matching headlines · coverage gap"
+      : (rawError.includes("429") || rawError.includes("cooldown active")) && item.tool === "news_search" ? "News providers rate-limited · fallback exhausted"
       : rawError.includes("429") || rawError.includes("cooldown active") ? "Market providers rate-limited · fallback exhausted"
       : item.warnings?.length ? "Completed with live-source fallback"
       : rawError.includes("API_KEY") ? "API key missing"
@@ -101,8 +104,8 @@ function renderReport(data) {
       : rawError ? rawError.split(/[\\n:]/).slice(0, 2).join(": ").slice(0, 90)
       : item.cached ? "Retrieved from local memory" : "Completed successfully";
     const latency = Number(item.latency_ms || 0);
-    return `<details class="execution-item ${item.success ? "success" : "failure"}">
-      <summary><span class="execution-mark ${item.success ? "" : "fail"}">${item.success ? "✓" : "!"}</span>
+    return `<details class="execution-item ${newsCoverageGap ? "warning" : item.success ? "success" : "failure"}">
+      <summary><span class="execution-mark ${newsCoverageGap ? "warn" : item.success ? "" : "fail"}">${newsCoverageGap ? "!" : item.success ? "✓" : "!"}</span>
       <span class="execution-copy"><b>${escapeHtml(item.tool.replaceAll("_"," "))}</b><small>${escapeHtml(shortError)}</small></span>
       <small class="execution-time">${latency < 1000 ? `${latency.toFixed(0)} ms` : `${(latency/1000).toFixed(1)} s`}</small></summary>
       ${rawError ? `<p class="execution-detail">${escapeHtml(rawError)}</p>` : item.warnings?.length ? `<p class="execution-detail">${escapeHtml(item.warnings.join("; "))}</p>` : ""}
