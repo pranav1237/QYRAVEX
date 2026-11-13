@@ -180,3 +180,35 @@ def test_tool_registry_market_evidence_does_not_shadow_url_quote_function():
     assert result.data["source_url"] == "https://finance.yahoo.com/quote/MSFT"
     assert result.evidence[0].source_url == "https://finance.yahoo.com/quote/MSFT"
 
+
+
+
+def test_news_provider_builds_broad_south_indian_bank_queries():
+    assert NewsProvider._ticker_from_query("SouthBank latest reported revenue") == "SOUTHBANK.NS"
+    queries = NewsProvider._issuer_queries("SouthBank latest reported revenue and profitability", "SOUTHBANK.NS")
+    assert "South Indian Bank" in queries
+    assert "SOUTHBANK" in queries
+
+
+def test_alpha_vantage_news_is_normalized(monkeypatch):
+    from types import SimpleNamespace
+
+    import workbridge.providers as providers_module
+
+    monkeypatch.setattr(
+        providers_module, "settings",
+        SimpleNamespace(alpha_vantage_api_key="test-token", timeout_seconds=5),
+    )
+    provider = NewsProvider()
+    monkeypatch.setattr(provider, "get_json", lambda *args, **kwargs: {
+        "feed": [{
+            "title": "South Indian Bank reports quarterly results",
+            "summary": "Revenue and profit update",
+            "time_published": "20261113T120000",
+            "url": "https://example.com/southbank-results",
+            "source": "Example Finance",
+        }]
+    })
+    result = provider._alpha_vantage_news("SOUTHBANK.NS", 10)
+    assert result["articles"][0]["title"].startswith("South Indian Bank")
+    assert result["articles"][0]["source"]["name"] == "Example Finance"
