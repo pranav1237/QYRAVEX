@@ -188,6 +188,9 @@ def test_news_provider_uses_bing_rss_after_gdelt_and_google_fail(monkeypatch):
     monkeypatch.setattr(provider, "get_json", lambda *args, **kwargs: (_ for _ in ()).throw(ProviderError("HTTP 429")))
     monkeypatch.setattr(provider, "_google_news_rss", lambda *args, **kwargs: (_ for _ in ()).throw(ProviderError("no articles")))
     monkeypatch.setattr(provider, "_yahoo_finance_rss", lambda *args, **kwargs: (_ for _ in ()).throw(ProviderError("no articles")))
+    monkeypatch.setattr(provider, "_finnhub_company_news", lambda *args, **kwargs: (_ for _ in ()).throw(ProviderError("no articles")))
+    monkeypatch.setattr(provider, "_alpha_vantage_news", lambda *args, **kwargs: (_ for _ in ()).throw(ProviderError("no articles")))
+    monkeypatch.setattr(provider, "_newsapi", lambda *args, **kwargs: (_ for _ in ()).throw(ProviderError("no articles")))
     monkeypatch.setattr(provider, "_bing_news_rss", lambda query, limit: {
         "articles": [{
             "title": "South Indian Bank announces quarterly results",
