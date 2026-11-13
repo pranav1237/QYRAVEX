@@ -517,7 +517,7 @@ class NewsProvider(HttpProvider):
             r"market trend|highlight|material risks|stock|share price"
         )
         cleaned = re.sub(
-            rf"\\b({removable_terms})\\b",
+            rf"\b({removable_terms})\b",
             " ",
             cleaned,
             flags=re.IGNORECASE,
