@@ -25,6 +25,28 @@ def test_market_provider_falls_back_to_stooq_when_yahoo_is_rate_limited(monkeypa
 
 
 
+def test_ambiguous_south_query_searches_south_indian_bank_issuer(monkeypatch):
+    provider = MarketProvider()
+    calls = []
+
+    def fake_json(url, **kwargs):
+        calls.append(kwargs.get("params", {}).get("q"))
+        return {"quotes": [{
+            "symbol": "SOUTHBANK.NS",
+            "shortname": "South Indian Bank Limited",
+            "exchDisp": "NSE",
+            "exch": "NSI",
+            "quoteType": "EQUITY",
+            "currency": "INR",
+        }]}
+
+    monkeypatch.setattr(provider, "get_json", fake_json)
+    matches = provider.search_symbols("SOUTH")
+    assert calls == ["South Indian Bank"]
+    assert matches[0]["symbol"] == "SOUTHBANK.NS"
+    assert matches[0]["currency"] == "INR"
+
+
 def test_market_symbol_search_returns_exchange_and_source_metadata(monkeypatch):
     provider = MarketProvider()
     monkeypatch.setattr(provider, "get_json", lambda *args, **kwargs: {
