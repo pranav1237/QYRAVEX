@@ -1,4 +1,4 @@
-# Zetheta WorkBridge — Autonomous Financial Research Agent
+# QYRAVEX - Research Beyond the Obvious.
 
 A source-grounded, auditable financial research agent built around a **Plan → Act → Observe → Reflect → Synthesize** loop. It combines deterministic financial-data tools, bounded ReAct execution, SQLite-backed memory, evidence-aware synthesis, and explicit reliability controls.
 
