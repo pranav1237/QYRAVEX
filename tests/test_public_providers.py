@@ -183,6 +183,35 @@ def test_tool_registry_market_evidence_does_not_shadow_url_quote_function():
 
 
 
+def test_news_provider_uses_bing_rss_after_gdelt_and_google_fail(monkeypatch):
+    provider = NewsProvider()
+    monkeypatch.setattr(provider, "get_json", lambda *args, **kwargs: (_ for _ in ()).throw(ProviderError("HTTP 429")))
+    monkeypatch.setattr(provider, "_google_news_rss", lambda *args, **kwargs: (_ for _ in ()).throw(ProviderError("no articles")))
+    monkeypatch.setattr(provider, "_bing_news_rss", lambda query, limit: {
+        "articles": [{
+            "title": "South Indian Bank announces quarterly results",
+            "url": "https://example.com/results",
+            "publishedAt": "2026-11-13T10:00:00Z",
+            "source": {"name": "Example News"},
+        }]
+    })
+    result = provider.search("SouthBank latest reported revenue", 10)
+    assert result["articles"][0]["title"].startswith("South Indian Bank")
+    assert "Bing News RSS" in result["providers"]
+
+
+def test_news_provider_returns_diagnostic_empty_result_instead_of_raising(monkeypatch):
+    provider = NewsProvider()
+    monkeypatch.setattr(provider, "get_json", lambda *args, **kwargs: (_ for _ in ()).throw(ProviderError("HTTP 429")))
+    monkeypatch.setattr(provider, "_google_news_rss", lambda *args, **kwargs: (_ for _ in ()).throw(ProviderError("no articles")))
+    monkeypatch.setattr(provider, "_bing_news_rss", lambda *args, **kwargs: (_ for _ in ()).throw(ProviderError("no articles")))
+    monkeypatch.setattr(provider, "_yahoo_finance_rss", lambda *args, **kwargs: (_ for _ in ()).throw(ProviderError("no articles")))
+    result = provider.search("SouthBank latest reported revenue", 10)
+    assert result["articles"] == []
+    assert result["partial_errors"]
+    assert "not evidence that the issuer has no recent news" not in result.get("coverage_note", "")
+
+
 def test_news_provider_builds_broad_south_indian_bank_queries():
     assert NewsProvider._ticker_from_query("SouthBank latest reported revenue") == "SOUTHBANK.NS"
     queries = NewsProvider._issuer_queries("SouthBank latest reported revenue and profitability", "SOUTHBANK.NS")
