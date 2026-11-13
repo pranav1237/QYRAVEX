@@ -122,7 +122,7 @@ function renderReport(data) {
     "NEWS", "LATEST", "ANALYZE", "ANALYSIS", "PRICE", "PERFORMANCE",
     "COMPANY", "SHARE", "SHARES", "ABOUT", "COMPARE", "RESEARCH"
   ]);
-  const tickerMatch = question.toUpperCase().match(/\b[A-Z]{1,5}\b/g)
+  const tickerMatch = question.toUpperCase().match(/\b[A-Z]{2,5}\b/g)
     ?.find(token => !ignoredTickerWords.has(token));
   const symbol = stockStep?.args?.symbol
     || (companyMatch ? alias[companyMatch[1]] : null)
