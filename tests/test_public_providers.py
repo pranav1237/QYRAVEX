@@ -289,3 +289,38 @@ def test_ai_research_provider_calls_all_configured_model_apis(monkeypatch):
     )
     assert result["successful_providers"] == ["OpenAI", "Google Gemini", "Anthropic Claude"]
     assert len(result["analyses"]) == 3
+
+def test_news_provider_uses_google_rss_when_gdelt_raises_raw_http_429(monkeypatch):
+    import httpx
+
+    provider = NewsProvider()
+    request = httpx.Request("GET", "https://api.gdeltproject.org/api/v2/doc/doc")
+    response = httpx.Response(429, request=request)
+    error = httpx.HTTPStatusError("429 Too Many Requests", request=request, response=response)
+
+    def fail_gdelt(*args, **kwargs):
+        raise error
+
+    article = {
+        "title": "South Indian Bank quarterly results",
+        "url": "https://example.com/southbank-results",
+        "publishedAt": "2026-11-13T10:00:00Z",
+        "source": {"name": "Example News"},
+    }
+    monkeypatch.setattr(provider, "get_json", fail_gdelt)
+    monkeypatch.setattr(
+        provider, "_google_news_rss",
+        lambda query, limit: {"articles": [article], "provider": "Google News RSS"},
+    )
+    monkeypatch.setattr(
+        provider, "_yahoo_finance_rss",
+        lambda *args, **kwargs: (_ for _ in ()).throw(ProviderError("no articles")),
+    )
+
+    result = provider.search("SouthBank latest results regression-raw-429", 10)
+
+    assert result["articles"]
+    assert result["articles"][0]["title"] == article["title"]
+    assert "Google News RSS" in result["providers"]
+    assert any("GDELT: HTTPStatusError" in item for item in result["partial_errors"])
+
