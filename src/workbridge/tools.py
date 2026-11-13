@@ -298,5 +298,9 @@ class ToolRegistry:
             "yahoo_finance_rss": True,
             "newsapi_optional": bool(settings.newsapi_api_key),
             "finnhub_optional": bool(settings.finnhub_api_key),
+            "alpha_vantage_news_optional": bool(settings.alpha_vantage_api_key),
+            "openai_ai_optional": bool(settings.openai_api_key),
+            "gemini_ai_optional": bool(settings.gemini_api_key),
+            "anthropic_ai_optional": bool(settings.anthropic_api_key),
         }
         return ToolResult(tool="source_health", success=True, data=data)
