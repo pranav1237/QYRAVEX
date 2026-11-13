@@ -30,7 +30,7 @@ class Planner:
             symbol for name, symbol in aliases.items() if name in upper_question
         ]
         tickers = list(dict.fromkeys(
-            named_tickers + re.findall(r"\b[A-Z]{1,5}\b", question)
+            named_tickers + re.findall(r"\b[A-Z]{2,5}\b", question)
         ))
         excluded = {"THE", "AND", "FOR", "WITH", "FROM", "WHAT", "HOW", "SEC", "USD"}
         tickers = [ticker for ticker in tickers if ticker not in excluded]
