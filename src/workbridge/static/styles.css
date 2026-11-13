@@ -91,3 +91,6 @@ body{background:radial-gradient(ellipse at 86% 3%,#dcebd7 0,transparent 28%),lin
 .forecast-method ul{padding-left:18px}
 @media(max-width:760px){.forecast-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:420px){.forecast-summary{grid-template-columns:1fr 1fr;gap:7px}.forecast-summary>div{padding:10px}}
+
+.forecast-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:10px;margin:0 0 10px}
+.forecast-legend span{white-space:nowrap}
