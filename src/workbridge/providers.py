@@ -133,6 +133,37 @@ class SecProvider(HttpProvider):
 class MarketProvider(HttpProvider):
     """Yahoo chart first, Stooq daily CSV fallback; both are live public endpoints."""
 
+    def search_symbols(self, query: str, limit: int = 8) -> list[dict[str, Any]]:
+        """Resolve a company name or ticker to exchange-qualified Yahoo symbols."""
+        cleaned = " ".join(query.split())
+        if not cleaned:
+            return []
+        data = self.get_json(
+            "https://query1.finance.yahoo.com/v1/finance/search",
+            params={"q": cleaned, "quotesCount": min(max(limit, 1), 15),
+                    "newsCount": 0, "enableFuzzyQuery": "true"},
+            headers={"User-Agent": "Mozilla/5.0 QYRAVEX financial research"},
+            retries=0,
+        )
+        candidates = []
+        for item in data.get("quotes", []):
+            if item.get("quoteType") not in {"EQUITY", "ETF", "INDEX"}:
+                continue
+            symbol = item.get("symbol")
+            if not symbol:
+                continue
+            candidates.append({
+                "symbol": symbol,
+                "name": item.get("longname") or item.get("shortname") or symbol,
+                "exchange": item.get("exchange") or item.get("exchDisp") or "Exchange not supplied",
+                "exchange_code": item.get("exch") or "",
+                "quote_type": item.get("quoteType"),
+                "currency": item.get("currency"),
+                "source": "Yahoo Finance symbol search",
+                "source_url": f"https://finance.yahoo.com/quote/{quote(symbol)}",
+            })
+        return candidates
+
     def price_history(self, symbol: str, period: str = "1y") -> dict[str, Any]:
         ticker = symbol.upper().strip()
         yahoo_error: Exception | None = None
@@ -140,7 +171,7 @@ class MarketProvider(HttpProvider):
             data = self.get_json(
                 f"https://query1.finance.yahoo.com/v8/finance/chart/{quote(ticker)}",
                 params={"range": period, "interval": "1d"},
-                headers={"User-Agent": "Mozilla/5.0 WorkBridge research"},
+                headers={"User-Agent": "Mozilla/5.0 QYRAVEX financial research"},
                 retries=0,
             )
             chart = data.get("chart", {}).get("result") or []
@@ -151,6 +182,36 @@ class MarketProvider(HttpProvider):
         except ProviderError as exc:
             yahoo_error = exc
 
+        # Resolve company names and exchange-qualified listings before failing.
+        resolved = None
+        try:
+            candidates = self.search_symbols(symbol)
+            exact = [item for item in candidates if item["symbol"].upper() == ticker]
+            resolved = (exact or candidates)[0] if candidates else None
+            if resolved and resolved["symbol"].upper() != ticker:
+                data = self.get_json(
+                    f"https://query1.finance.yahoo.com/v8/finance/chart/{quote(resolved['symbol'])}",
+                    params={"range": period, "interval": "1d"},
+                    headers={"User-Agent": "Mozilla/5.0 QYRAVEX financial research"},
+                    retries=0,
+                )
+                chart = data.get("chart", {}).get("result") or []
+                if chart and chart[0].get("timestamp"):
+                    chart[0].setdefault("meta", {})["dataProvider"] = "Yahoo Finance"
+                    chart[0]["meta"]["resolvedFrom"] = ticker
+                    chart[0]["meta"]["symbolSearch"] = resolved
+                    return data
+        except ProviderError as exc:
+            yahoo_error = exc
+
+        # Stooq .us is only meaningful for US listings; never invent it for
+        # an international ticker such as NSE (.NS) or BSE (.BO).
+        if "." in ticker or (resolved and resolved.get("exchange_code") not in {"NMS", "NYQ", "ASE", "NGM", "NCM", "PCX"}):
+            detail = f"Yahoo Finance could not verify a price series for {ticker}"
+            if resolved:
+                detail += f" (candidate: {resolved['name']} / {resolved['symbol']})"
+            raise ProviderError(f"{detail}: {yahoo_error}")
+
         days = {"1mo": 40, "3mo": 100, "6mo": 190, "1y": 370, "2y": 740, "5y": 1850}
         end = datetime.now(UTC).date()
         start = end - timedelta(days=days.get(period, 370))
@@ -160,7 +221,7 @@ class MarketProvider(HttpProvider):
                 "https://stooq.com/q/d/l/",
                 params={"s": stooq_symbol, "i": "d", "d1": start.strftime("%Y%m%d"),
                         "d2": end.strftime("%Y%m%d")},
-                headers={"User-Agent": "Mozilla/5.0 WorkBridge research"},
+                headers={"User-Agent": "Mozilla/5.0 QYRAVEX financial research"},
                 retries=1,
             )
             rows = list(csv.DictReader(io.StringIO(text)))
