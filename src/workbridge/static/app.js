@@ -139,6 +139,7 @@ let activeChartPeriod = "1y";
 let activeChartData = null;
 let activeChartCurrency = "USD";
 let activeChartQuote = null;
+let activeForecastData = null;
 
 function drawStockChart(points, currency, liveQuote = activeChartQuote) {
   const canvas = $("#stock-chart");
@@ -199,6 +200,67 @@ function drawStockChart(points, currency, liveQuote = activeChartQuote) {
     (liveQuote?.price != null ? `<span>Live quote <b>${escapeHtml(money(liveQuote.price))}</b> · ${escapeHtml(liveQuote.change_percent ?? 0)}%</span>` : "");
 }
 
+function drawForecastChart(data) {
+  const canvas = $("#stock-forecast-chart");
+  const history = (activeChartData || []).slice(-60);
+  if (!canvas || history.length < 2 || !data?.scenarios) return;
+  const rect = canvas.getBoundingClientRect();
+  const ratio = window.devicePixelRatio || 1;
+  const width = Math.max(300, rect.width);
+  const height = Math.max(150, rect.height);
+  canvas.width = Math.round(width * ratio);
+  canvas.height = Math.round(height * ratio);
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  ctx.clearRect(0, 0, width, height);
+  const values = history.map(point => Number(point.close)).concat([
+    Number(data.scenarios.bear), Number(data.scenarios.base), Number(data.scenarios.bull)
+  ]).filter(Number.isFinite);
+  const min = Math.min(...values), max = Math.max(...values);
+  const span = max - min || Math.max(Math.abs(max) * .02, 1);
+  const low = min - span * .08, high = max + span * .08;
+  const left = 56, right = 16, top = 12, bottom = 25;
+  const x = index => left + index * (width - left - right) / history.length;
+  const y = value => top + (high - value) * (height - top - bottom) / (high - low);
+  const style = getComputedStyle(document.documentElement);
+  const line = style.getPropertyValue("--green").trim() || "#176b4b";
+  const grid = style.getPropertyValue("--line").trim() || "#e0e9df";
+  ctx.font = "10px DM Mono, monospace";
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+  for (let i = 0; i <= 3; i++) {
+    const value = high - (high - low) * i / 3;
+    const py = y(value);
+    ctx.beginPath(); ctx.moveTo(left, py); ctx.lineTo(width - right, py);
+    ctx.strokeStyle = grid; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = "#879187";
+    ctx.fillText(new Intl.NumberFormat(undefined, {maximumFractionDigits:2}).format(value), left - 7, py);
+  }
+  const last = Number(history[history.length - 1].close);
+  const endX = x(history.length);
+  ctx.beginPath();
+  ctx.moveTo(x(history.length - 1), y(last));
+  ctx.lineTo(endX, y(data.scenarios.bull));
+  ctx.lineTo(endX, y(data.scenarios.bear));
+  ctx.closePath();
+  ctx.fillStyle = line + "18";
+  ctx.fill();
+  ctx.beginPath();
+  history.forEach((point, index) => index ? ctx.lineTo(x(index), y(Number(point.close))) : ctx.moveTo(x(index), y(Number(point.close))));
+  ctx.strokeStyle = line; ctx.lineWidth = 2.1; ctx.lineJoin = "round"; ctx.stroke();
+  ctx.setLineDash([5, 4]);
+  ctx.beginPath(); ctx.moveTo(x(history.length - 1), y(last)); ctx.lineTo(endX, y(data.scenarios.base));
+  ctx.strokeStyle = line; ctx.lineWidth = 2; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x(history.length - 1), y(last)); ctx.lineTo(endX, y(data.scenarios.bull));
+  ctx.moveTo(x(history.length - 1), y(last)); ctx.lineTo(endX, y(data.scenarios.bear));
+  ctx.strokeStyle = "#9aa69a"; ctx.lineWidth = 1.3; ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = "#879187"; ctx.textAlign = "left";
+  ctx.fillText("Historical", left, height - 8);
+  ctx.textAlign = "right";
+  ctx.fillText("+" + data.horizon_trading_days + " trading days", width - right, height - 8);
+}
+
 async function loadMarketForecast(symbol, horizon = activeForecastHorizon) {
   activeForecastHorizon = horizon;
   const panel = $("#stock-forecast");
@@ -208,6 +270,8 @@ async function loadMarketForecast(symbol, horizon = activeForecastHorizon) {
   $("#stock-forecast-content").innerHTML = "";
   try {
     const data = await api("/api/market/" + encodeURIComponent(symbol) + "/forecast?horizon=" + horizon);
+    activeForecastData = data;
+    drawForecastChart(data);
     const currency = data.currency || "USD";
     const money = value => new Intl.NumberFormat(undefined, {style:"currency",currency,maximumFractionDigits:2}).format(value);
     const percent = value => (value >= 0 ? "+" : "") + (value * 100).toFixed(2) + "%";
@@ -247,6 +311,7 @@ async function loadMarketForecast(symbol, horizon = activeForecastHorizon) {
       '<details class="forecast-method"><summary>How this forecast is calculated and its limitations</summary><p>' +
         escapeHtml(data.method) + '</p><ul>' + limitations + '</ul></details>';
   } catch (error) {
+    activeForecastData = null;
     $("#stock-forecast-status").textContent = "Forecast unavailable: " + error.message;
     $("#stock-forecast-content").innerHTML = '<p class="muted">The historical chart can still be used. Forecasting requires a valid daily price series with at least 21 observations.</p>';
   }
@@ -330,6 +395,7 @@ $$("[data-forecast-horizon]").forEach(button => {
 });
 window.addEventListener("resize", () => {
   if (activeChartData) drawStockChart(activeChartData, activeChartCurrency, activeChartQuote);
+  if (activeForecastData) drawForecastChart(activeForecastData);
 });
 
 async function runResearch() {
