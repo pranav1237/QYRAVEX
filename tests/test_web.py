@@ -22,6 +22,8 @@ def test_dashboard_assets_are_served():
     assert "drawForecastChart" in response.text
 
     page = client.get("/")
+    assert 'data-view="predictor"' in page.text
+    assert "AI stock predictor & live market visualizer" in page.text
     assert 'id="stock-load"' in page.text
     assert 'id="stock-forecast-chart"' in page.text
     assert 'id="stock-candidates"' in page.text
