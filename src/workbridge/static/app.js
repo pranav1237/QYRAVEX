@@ -43,7 +43,7 @@ async function loadStatus() {
     ).join("");
   } catch (error) {
     $("#system-status").textContent = "API unavailable";
-    $("#provider-count").textContent = "Start WorkBridge web server";
+    $("#provider-count").textContent = "Start QYRAVEX web server";
     $("#provider-list").innerHTML = '<div class="empty-state">Could not reach the research API.</div>';
   }
 }
@@ -74,8 +74,8 @@ function renderReport(data) {
   $("#limitations").innerHTML = limitations.length ? limitations.map(item => {
     const raw = String(item);
     const isNewsLimit = /gdeltproject\\.org|news\\.google\\.com|news_search/i.test(raw);
-    const friendly = (raw.includes("429") || raw.includes("cooldown active")) && isNewsLimit ? "News search was rate-limited. WorkBridge tries Google News RSS as a live alternative; the news section may be incomplete if both sources are unavailable."
-      : raw.includes("429") || raw.includes("cooldown active") ? "Market data was rate-limited. WorkBridge tries Stooq as an alternate daily-price source; market metrics may be unavailable if both providers are unavailable."
+    const friendly = (raw.includes("429") || raw.includes("cooldown active")) && isNewsLimit ? "News search was rate-limited. QYRAVEX tries Google News RSS as a live alternative; the news section may be incomplete if both sources are unavailable."
+      : raw.includes("429") || raw.includes("cooldown active") ? "Market data was rate-limited. QYRAVEX tries Stooq as an alternate daily-price source; market metrics may be unavailable if both providers are unavailable."
       : raw.includes("API_KEY") || raw.includes("not configured") ? "An optional data source is not configured. Add its API key to enable this enrichment."
       : raw.startsWith("Optional sources not configured:") ? ""
       : raw.length > 190 ? raw.slice(0, 187) + "…"
