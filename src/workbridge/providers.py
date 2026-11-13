@@ -323,7 +323,7 @@ class AIResearchProvider:
                 response = httpx.post(
                     "https://api.openai.com/v1/chat/completions",
                     headers={"Authorization": f"Bearer {settings.openai_api_key}"},
-                    json={"model": "gpt-4.1-mini", "temperature": 0.1,
+                    json={"model": "gpt-5.5", "temperature": 0.1,
                           "messages": [{"role": "user", "content": prompt}]},
                     timeout=12.0,
                 )
@@ -336,7 +336,7 @@ class AIResearchProvider:
         if settings.gemini_api_key:
             try:
                 response = httpx.post(
-                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent",
                     params={"key": settings.gemini_api_key},
                     json={"contents": [{"parts": [{"text": prompt}]}],
                           "generationConfig": {"temperature": 0.1}},
@@ -354,7 +354,7 @@ class AIResearchProvider:
                     "https://api.anthropic.com/v1/messages",
                     headers={"x-api-key": settings.anthropic_api_key,
                              "anthropic-version": "2023-06-01"},
-                    json={"model": "claude-3-5-haiku-20241022", "max_tokens": 700,
+                    json={"model": "claude-haiku-5-5", "max_tokens": 700,
                           "temperature": 0.1, "messages": [{"role": "user", "content": prompt}]},
                     timeout=12.0,
                 )
