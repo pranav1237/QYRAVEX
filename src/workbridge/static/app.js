@@ -278,6 +278,11 @@ async function loadMarketForecast(symbol, horizon = activeForecastHorizon) {
     const scenarios = data.scenarios || {};
     const sources = data.sources || [];
     const news = data.news || {};
+    const aiReview = data.ai_review || {};
+    const aiPanels = (aiReview.analyses || []).map(item =>
+      '<section class="forecast-ai-provider"><strong>' + escapeHtml(item.provider) +
+      '</strong><p>' + escapeHtml(item.analysis) + '</p></section>'
+    ).join("");
     $("#stock-forecast-status").textContent =
       (data.company || data.symbol) + " · " + horizon + " trading-day horizon · Built " +
       new Date(data.generated_at).toLocaleString() + " · " + data.method;
@@ -312,6 +317,12 @@ async function loadMarketForecast(symbol, horizon = activeForecastHorizon) {
         ' · Sources: ' + escapeHtml((news.providers || []).join(", ") || "No news provider returned articles") + '</span>' +
         (news.error ? '<small>News retrieval note: ' + escapeHtml(news.error) + '</small>' : "") +
         sourceLinks + '</div>' +
+      '<div class="forecast-evidence"><strong>Independent AI research review</strong>' +
+        '<span>Configured: ' + escapeHtml((aiReview.enabled_providers || []).join(", ") || "No AI API keys configured") +
+        ' · Successful: ' + escapeHtml((aiReview.successful_providers || []).join(", ") || "No model responses") + '</span>' +
+        (aiPanels || '<small>Add one or more AI provider keys to enable independent evidence reviews. The statistical forecast remains available without them.</small>') +
+        ((aiReview.errors || []).length ? '<small>Provider errors: ' + escapeHtml(aiReview.errors.join(" · ")) + '</small>' : "") +
+      '</div>' +
       '<details class="forecast-method"><summary>How this forecast is calculated and its limitations</summary><p>' +
         escapeHtml(data.method) + '</p><ul>' + limitations + '</ul></details>';
   } catch (error) {
