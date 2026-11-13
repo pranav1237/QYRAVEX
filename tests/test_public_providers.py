@@ -50,7 +50,7 @@ def test_market_provider_resolves_exchange_qualified_listing_after_bad_symbol(mo
 
     def fake_json(url, **kwargs):
         calls.append(url)
-        if "/v8/finance/chart/SOUTH" in url:
+        if url.endswith("/v8/finance/chart/SOUTH"):
             raise ProviderError("404 Not Found")
         if "/v1/finance/search" in url:
             return {"quotes": [{
