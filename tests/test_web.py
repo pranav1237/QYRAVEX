@@ -117,3 +117,36 @@ def test_market_forecast_rejects_unsupported_horizon():
 def test_market_chart_api_rejects_invalid_period():
     response = client.get("/api/market/MSFT?period=intraday")
     assert response.status_code == 422
+
+
+def test_market_forecast_includes_independent_ai_reviews(monkeypatch):
+    closes = [50.0 + index * 0.12 for index in range(80)]
+    timestamps = [1790000000 + index * 86400 for index in range(len(closes))]
+    monkeypatch.setattr(
+        "workbridge.web.MarketProvider.price_history",
+        lambda self, symbol, period: {"chart": {"result": [{
+            "meta": {"symbol": "SOUTHBANK.NS", "currency": "INR",
+                     "dataProvider": "Yahoo Finance", "longName": "South Indian Bank"},
+            "timestamp": timestamps,
+            "indicators": {"quote": [{"close": closes}]},
+        }]}},
+    )
+    monkeypatch.setattr(
+        "workbridge.web.NewsProvider.search",
+        lambda self, query, page_size: {"articles": [], "providers": [],
+                                        "coverage_note": "No news found."},
+    )
+    monkeypatch.setattr(
+        "workbridge.web.AIResearchProvider.analyze",
+        lambda self, **kwargs: {
+            "enabled_providers": ["OpenAI", "Google Gemini"],
+            "successful_providers": ["OpenAI"],
+            "analyses": [{"provider": "OpenAI", "analysis": "Mixed outlook; risks remain."}],
+            "errors": ["Google Gemini: unavailable"],
+        },
+    )
+    response = client.get("/api/market/SOUTHBANK.NS/forecast?horizon=20")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["ai_review"]["successful_providers"] == ["OpenAI"]
+    assert payload["ai_review"]["analyses"][0]["analysis"].startswith("Mixed outlook")
