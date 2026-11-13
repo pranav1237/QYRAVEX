@@ -512,7 +512,16 @@ class NewsProvider(HttpProvider):
     @staticmethod
     def _issuer_queries(query: str, ticker: str | None) -> list[str]:
         cleaned = re.sub(r'["“”]', " ", query)
-        cleaned = re.sub(r"\b(analyze|analyse|latest|reported|revenue|profitability|balance sheet|market trend|highlight|material risks|stock|share price)\b", " ", cleaned, flags=re.IGNORECASE)
+        removable_terms = (
+            r"analyze|analyse|latest|reported|revenue|profitability|balance sheet|"
+            r"market trend|highlight|material risks|stock|share price"
+        )
+        cleaned = re.sub(
+            rf"\\b({removable_terms})\\b",
+            " ",
+            cleaned,
+            flags=re.IGNORECASE,
+        )
         cleaned = " ".join(cleaned.split()).strip(" .,;:-")
         variants = []
         if "south" in query.casefold():
