@@ -448,6 +448,18 @@ class NewsProvider(HttpProvider):
             except ProviderError as exc:
                 errors.append(f"Google News RSS issuer fallback: {exc}")
 
+        # Bing News RSS is an additional public index; use the issuer's home
+        # market for India-listed companies to avoid US-centric false negatives.
+        if not articles:
+            for alternate_query in search_queries[:3] or [query]:
+                try:
+                    found = self._bing_news_rss(alternate_query, limit)["articles"]
+                    articles.extend(found)
+                    providers.append("Bing News RSS")
+                    break
+                except ProviderError as exc:
+                    errors.append(f"Bing News RSS: {exc}")
+
         if ticker:
             try:
                 found = self._yahoo_finance_rss(ticker, limit)["articles"]
@@ -481,9 +493,8 @@ class NewsProvider(HttpProvider):
                 errors.append(f"NewsAPI: {exc}")
 
         merged = self._deduplicate(articles, limit)
-        if not merged:
-            detail = "; ".join(errors) or "All configured news sources returned no matching articles"
-            raise ProviderError(f"No live news results available. {detail}")
+        if not merged and not errors:
+            errors.append("All configured news indexes returned no matching articles.")
 
         result = {
             "articles": merged,
@@ -597,14 +608,29 @@ class NewsProvider(HttpProvider):
         return articles
 
     def _google_news_rss(self, query: str, page_size: int) -> dict[str, Any]:
+        india_query = bool(re.search(r"\b(south indian bank|nse|bse|india)\b", query, re.IGNORECASE))
+        region = {"hl": "en-IN", "gl": "IN", "ceid": "IN:en"} if india_query else {
+            "hl": "en-US", "gl": "US", "ceid": "US:en"
+        }
         response = self.get_text(
             "https://news.google.com/rss/search",
-            params={"q": query, "hl": "en-US", "gl": "US", "ceid": "US:en"},
+            params={"q": query, **region},
             headers={"Accept": "application/rss+xml, application/xml, text/xml"},
             retries=0,
         )
         return {"articles": self._parse_rss(response, page_size, "Google News publisher"),
                 "source": "Google News RSS", "provider": "Google News RSS"}
+
+    def _bing_news_rss(self, query: str, page_size: int) -> dict[str, Any]:
+        india_query = bool(re.search(r"\b(south indian bank|nse|bse|india)\b", query, re.IGNORECASE))
+        response = self.get_text(
+            "https://www.bing.com/news/search",
+            params={"q": query, "format": "rss", "mkt": "en-IN" if india_query else "en-US"},
+            headers={"Accept": "application/rss+xml, application/xml, text/xml"},
+            retries=0,
+        )
+        return {"articles": self._parse_rss(response, page_size, "Bing News publisher"),
+                "source": "Bing News RSS", "provider": "Bing News RSS"}
 
     def _yahoo_finance_rss(self, ticker: str, page_size: int) -> dict[str, Any]:
         response = self.get_text(
