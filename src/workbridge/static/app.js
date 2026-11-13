@@ -23,11 +23,16 @@ async function api(path, options = {}) {
   return payload;
 }
 function showView(name) {
-  $$(".view").forEach(view => view.classList.toggle("active", view.id === `view-${name}`));
-  $$(".nav-item").forEach(button => button.classList.toggle("active", button.dataset.view === name));
-  $("#crumb-current").textContent = ({research:"Research desk",history:"Research history",benchmarks:"Benchmarks"})[name];
+  const viewName = name === "predictor" ? "research" : name;
+  $(".view").forEach(view => view.classList.toggle("active", view.id === `view-${viewName}`));
+  $(".nav-item").forEach(button => button.classList.toggle("active", button.dataset.view === name));
+  $("#crumb-current").textContent = ({research:"Research desk",predictor:"AI stock predictor",history:"Research history",benchmarks:"Benchmarks"})[name];
   if (name === "history") loadHistory();
   if (name === "benchmarks") loadBenchmarks();
+  if (name === "predictor") {
+    $("#stock-visualizer").scrollIntoView({behavior:"smooth", block:"start"});
+    $("#stock-symbol-input")?.focus({preventScroll:true});
+  }
 }
 $$(".nav-item").forEach(button => button.addEventListener("click", () => showView(button.dataset.view)));
 $$(".hint").forEach(button => button.addEventListener("click", () => { $("#question").value = button.dataset.prompt; $("#question").focus(); }));
@@ -70,7 +75,8 @@ function renderReport(data) {
   const reportMetrics = report.metrics || {};
   renderMetrics({...data.metrics, ...reportMetrics, tool_calls: data.metrics?.tool_calls || 0}, evidence);
   $("#summary-text").textContent = report.executive_summary || "The run did not return an executive summary.";
-  const limitations = report.limitations || [];
+  const rawLimitations = report.limitations || [];
+  const limitations = [...new Map(rawLimitations.map(item => [String(item).replace(/\\s+/g, " ").trim().toLowerCase(), item])).values()];
   $("#limitations").innerHTML = limitations.length ? limitations.map(item => {
     const raw = String(item);
     const isNewsLimit = /gdeltproject\\.org|news\\.google\\.com|news_search/i.test(raw);
@@ -112,7 +118,8 @@ function renderReport(data) {
   const question = String(report.question || "");
   const alias = {
     APPLE: "AAPL", MICROSOFT: "MSFT", NVIDIA: "NVDA", TESLA: "TSLA",
-    AMAZON: "AMZN", GOOGLE: "GOOGL", ALPHABET: "GOOGL", META: "META"
+    AMAZON: "AMZN", GOOGLE: "GOOGL", ALPHABET: "GOOGL", META: "META",
+    SOUTHBANK: "SOUTHBANK.NS", "SOUTH INDIAN BANK": "SOUTHBANK.NS"
   };
   const companyMatch = Object.entries(alias).find(([name]) =>
     new RegExp("\\b" + name + "\\b", "i").test(question)
