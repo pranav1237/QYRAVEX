@@ -460,9 +460,17 @@ class NewsProvider(HttpProvider):
             except (ProviderError, ValueError, TypeError, KeyError, OverflowError) as exc:
                 errors.append(f"Finnhub Company News: {exc}")
 
+        if settings.alpha_vantage_api_key and ticker:
+            try:
+                found = self._alpha_vantage_news(ticker, limit)["articles"]
+                articles.extend(found)
+                providers.append("Alpha Vantage News Sentiment")
+            except ProviderError as exc:
+                errors.append(f"Alpha Vantage News Sentiment: {exc}")
+
         if settings.newsapi_api_key:
             try:
-                found = self._newsapi(query, limit)["articles"]
+                found = self._newsapi(" OR ".join(search_queries[:3]) or query, limit)["articles"]
                 articles.extend(found)
                 providers.append("NewsAPI")
             except ProviderError as exc:
@@ -628,6 +636,26 @@ class NewsProvider(HttpProvider):
             raise ProviderError(f"Finnhub returned no company-news articles for {ticker}")
         return {"articles": articles[:page_size], "source": "Finnhub Company News",
                 "provider": "Finnhub Company News"}
+
+    def _alpha_vantage_news(self, ticker: str, page_size: int) -> dict[str, Any]:
+        data = self.get_json(
+            "https://www.alphavantage.co/query",
+            params={"function": "NEWS_SENTIMENT", "tickers": ticker,
+                    "limit": min(page_size, 50), "apikey": settings.alpha_vantage_api_key},
+            retries=0,
+        )
+        if data.get("Note") or data.get("Information") or data.get("Error Message"):
+            raise ProviderError(str(data.get("Note") or data.get("Information") or data.get("Error Message")))
+        articles = [{
+            "title": item.get("title") or "Untitled article",
+            "description": item.get("summary"),
+            "publishedAt": item.get("time_published"),
+            "url": item.get("url"),
+            "source": {"name": item.get("source") or "Alpha Vantage"},
+        } for item in data.get("feed", []) if item.get("url")]
+        if not articles:
+            raise ProviderError(f"Alpha Vantage returned no news for {ticker}")
+        return {"articles": articles, "provider": "Alpha Vantage News Sentiment"}
 
     def _newsapi(self, query: str, page_size: int) -> dict[str, Any]:
         data = self.get_json(
