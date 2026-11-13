@@ -82,6 +82,7 @@
               <input id="stock-symbol-input" type="text" maxlength="100" placeholder="Enter company name or ticker (e.g. RELIANCE, MSFT)" aria-label="Company name or stock ticker" style="flex:1;min-width:220px">
               <button id="stock-load" class="primary-btn" type="button"><span>Load stock</span><span class="arrow">↗</span></button>
             </div>
+            <select id="stock-candidates" hidden aria-label="Choose verified stock listing" style="width:100%;margin:0 0 10px"></select>
             <div id="stock-chart-status" class="muted" style="margin:8px 0 12px">Search a company or ticker to load verified daily market data.</div>
             <div style="width:100%;height:280px;position:relative"><canvas id="stock-chart" aria-label="Stock price history chart" role="img" style="width:100%;height:100%"></canvas></div>
             <div id="stock-chart-summary" class="muted" style="display:flex;gap:18px;flex-wrap:wrap;margin-top:12px"></div>
