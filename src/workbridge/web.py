@@ -128,6 +128,8 @@ def market_chart(symbol: str, period: str = "1y") -> dict[str, Any]:
         if len(points) < 2:
             raise ProviderError("Not enough daily price observations to draw a chart.")
 
+        meta = row.get("meta", {})
+        resolved_symbol = meta.get("symbol") or ticker
         live_quote = None
         refresh_optional_api_keys()
         if settings.finnhub_api_key:
@@ -144,8 +146,6 @@ def market_chart(symbol: str, period: str = "1y") -> dict[str, Any]:
             except ProviderError:
                 live_quote = None
 
-        meta = row.get("meta", {})
-        resolved_symbol = meta.get("symbol") or ticker
         data_provider = meta.get("dataProvider") or "Yahoo Finance"
         source_url = (
             f"https://stooq.com/q/?s={resolved_symbol.lower()}.us"
