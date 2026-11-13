@@ -41,6 +41,7 @@ def refresh_optional_api_keys() -> None:
 
     object.__setattr__(settings, "newsapi_api_key", getenv("NEWSAPI_API_KEY") or None)
     object.__setattr__(settings, "finnhub_api_key", getenv("FINNHUB_API_KEY") or None)
+    object.__setattr__(settings, "alpha_vantage_api_key", getenv("ALPHAVANTAGE_API_KEY") or None)
     object.__setattr__(settings, "openai_api_key", getenv("OPENAI_API_KEY") or None)
     object.__setattr__(settings, "gemini_api_key", getenv("GEMINI_API_KEY") or None)
     object.__setattr__(settings, "anthropic_api_key", getenv("ANTHROPIC_API_KEY") or None)
