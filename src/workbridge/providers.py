@@ -295,6 +295,11 @@ class MacroProvider(HttpProvider):
 class NewsProvider(HttpProvider):
     """Aggregate public news indexes and optional licensed news APIs."""
 
+    def __init__(self) -> None:
+        # A slow news index must not stall the whole research run for the global
+        # 20-second default timeout. Other providers are still attempted.
+        super().__init__(timeout=min(settings.timeout_seconds, 6.0))
+
     _cache: dict[str, tuple[float, dict[str, Any]]] = {}
     _cache_lock = threading.Lock()
     cache_ttl_seconds = 180
@@ -340,6 +345,20 @@ class NewsProvider(HttpProvider):
             errors.append(f"Google News RSS: {exc}")
 
         ticker = self._ticker_from_query(query)
+        # Broad issuer-name searches avoid the false-negative behavior of an
+        # exact quoted company phrase followed by unrelated prompt wording.
+        search_queries = self._issuer_queries(query, ticker)
+        for alternate_query in search_queries:
+            if alternate_query.casefold() == query.casefold():
+                continue
+            try:
+                found = self._google_news_rss(alternate_query, limit)["articles"]
+                articles.extend(found)
+                providers.append("Google News RSS (issuer fallback)")
+                break
+            except ProviderError as exc:
+                errors.append(f"Google News RSS issuer fallback: {exc}")
+
         if ticker:
             try:
                 found = self._yahoo_finance_rss(ticker, limit)["articles"]
@@ -383,8 +402,24 @@ class NewsProvider(HttpProvider):
         return result
 
     @staticmethod
+    def _issuer_queries(query: str, ticker: str | None) -> list[str]:
+        cleaned = re.sub(r'["“”]', " ", query)
+        cleaned = re.sub(r"\b(analyze|analyse|latest|reported|revenue|profitability|balance sheet|market trend|highlight|material risks|stock|share price)\b", " ", cleaned, flags=re.IGNORECASE)
+        cleaned = " ".join(cleaned.split()).strip(" .,;:-")
+        variants = []
+        if "south" in query.casefold():
+            variants.extend(["South Indian Bank", '"South Indian Bank"'])
+        if cleaned and len(cleaned) >= 3:
+            variants.append(cleaned)
+        if ticker:
+            variants.append(ticker.replace(".NS", ""))
+        return list(dict.fromkeys(item for item in variants if item))
+
+    @staticmethod
     def _ticker_from_query(query: str) -> str | None:
         aliases = {
+            "SOUTH INDIAN BANK": "SOUTHBANK.NS",
+            "SOUTHBANK": "SOUTHBANK.NS",
             "APPLE": "AAPL", "MICROSOFT": "MSFT", "NVIDIA": "NVDA",
             "TESLA": "TSLA", "AMAZON": "AMZN", "GOOGLE": "GOOGL",
             "ALPHABET": "GOOGL", "META": "META",
@@ -392,6 +427,8 @@ class NewsProvider(HttpProvider):
         for name, ticker in aliases.items():
             if re.search(rf"\b{name}\b", query, re.IGNORECASE):
                 return ticker
+        if re.search(r"\bSOUTH(?:BANK)?\b|SOUTH INDIAN BANK", query, re.IGNORECASE):
+            return "SOUTHBANK.NS"
         tokens = re.findall(r"\b[A-Z]{2,5}\b", query)
         excluded = {
             "THE", "AND", "FOR", "WITH", "FROM", "WHAT", "HOW", "STOCK",
