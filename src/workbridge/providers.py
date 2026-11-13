@@ -304,7 +304,9 @@ class AIResearchProvider:
             "issuer": company, "symbol": symbol, "horizon_trading_days": horizon,
             "quantitative_market_facts": market_facts,
             "indexed_news": [{
-                "title": item.get("title"), "publisher": (item.get("source") or {}).get("name"),
+                "title": item.get("title"),
+                "description": (item.get("description") or "")[:1200],
+                "publisher": (item.get("source") or {}).get("name"),
                 "published_at": item.get("publishedAt"), "url": item.get("url"),
             } for item in articles[:12]],
         }
@@ -325,7 +327,7 @@ class AIResearchProvider:
                     headers={"Authorization": f"Bearer {settings.openai_api_key}"},
                     json={"model": "gpt-5.5",
                           "messages": [{"role": "user", "content": prompt}]},
-                    timeout=12.0,
+                    timeout=8.0,
                 )
                 response.raise_for_status()
                 content = response.json()["choices"][0]["message"]["content"]
