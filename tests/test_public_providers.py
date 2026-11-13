@@ -139,3 +139,22 @@ def test_finnhub_company_news_is_normalized(monkeypatch):
     assert result["articles"][0]["title"] == "Example company expands cloud business"
     assert result["articles"][0]["url"] == "https://example.com/company-news"
     assert result["articles"][0]["source"]["name"] == "Example Wire"
+
+def test_tool_registry_market_evidence_does_not_shadow_url_quote_function():
+    from workbridge.tools import ToolRegistry
+
+    class FakeMarket:
+        def price_history(self, symbol, period):
+            return {"chart": {"result": [{
+                "meta": {"symbol": "MSFT", "currency": "USD", "dataProvider": "Yahoo Finance"},
+                "timestamp": [1794432000, 1794518400],
+                "indicators": {"quote": [{"close": [100.0, 101.0]}]},
+            }]}}
+
+    registry = ToolRegistry.__new__(ToolRegistry)
+    registry.market = FakeMarket()
+    result = registry.price_history("MSFT", "1mo")
+    assert result.success
+    assert result.data["source_url"] == "https://finance.yahoo.com/quote/MSFT"
+    assert result.evidence[0].source_url == "https://finance.yahoo.com/quote/MSFT"
+
