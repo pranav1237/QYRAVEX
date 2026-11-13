@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 
 from .agent import ResearchAgent
 from .benchmarks import run_challenges
-from .config import settings
+from .config import refresh_optional_api_keys, settings
 from .memory import MemoryStore
 from .providers import MarketProvider, NewsProvider, ProviderError
 from .synthesis import synthesize
@@ -129,6 +129,7 @@ def market_chart(symbol: str, period: str = "1y") -> dict[str, Any]:
             raise ProviderError("Not enough daily price observations to draw a chart.")
 
         live_quote = None
+        refresh_optional_api_keys()
         if settings.finnhub_api_key:
             try:
                 quote_data = MarketProvider().quote(ticker)
