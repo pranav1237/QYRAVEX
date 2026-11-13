@@ -69,3 +69,25 @@ body{background:radial-gradient(ellipse at 86% 3%,#dcebd7 0,transparent 28%),lin
 @keyframes qyravex-hero-float{0%,100%{transform:translateY(0) rotateY(-12deg) rotateX(8deg)}50%{transform:translateY(-6px) rotateY(12deg) rotateX(-5deg)}}
 @keyframes qyravex-hero-orbit{to{transform:rotateX(62deg) rotateZ(395deg)}}
 @media(prefers-reduced-motion:reduce){.qyravex-mark-core,.qyravex-mark-orbit,.qyravex-mark-spark,.qyravex-hero-core,.qyravex-hero-core:before,.qyravex-hero-core:after{animation:none!important}}
+
+
+/* QYRAVEX live visualizer + forecast presentation */
+.forecast-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:16px 0}
+.forecast-summary>div{min-width:0;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--surface,rgba(255,255,255,.45));display:flex;flex-direction:column;gap:7px}
+.forecast-summary span,.forecast-metric span{font:500 10px var(--mono);letter-spacing:.07em;color:var(--muted)}
+.forecast-summary strong{font:700 clamp(16px,2vw,22px) var(--display);color:var(--ink)}
+.forecast-summary small{font-size:11px;color:var(--muted)}
+.forecast-lead{border-color:var(--green)!important}
+.forecast-detail{display:flex;flex-wrap:wrap;gap:10px 22px;padding:12px 0;color:var(--muted);font-size:12px}
+.forecast-detail b{color:var(--ink);margin-left:4px}
+.forecast-note,.forecast-method p,.forecast-method li{font-size:12px;line-height:1.65;color:var(--muted)}
+.forecast-evidence{display:flex;flex-direction:column;gap:8px;padding:13px 0;border-top:1px solid var(--line);font-size:12px}
+.forecast-evidence>strong{font:600 12px var(--display);color:var(--ink)}
+.forecast-evidence>span,.forecast-evidence small{color:var(--muted)}
+.forecast-evidence a{color:var(--green);text-decoration:none;overflow-wrap:anywhere}
+.forecast-evidence a:hover{text-decoration:underline}
+.forecast-method{border-top:1px solid var(--line);padding-top:12px}
+.forecast-method summary{cursor:pointer;font-size:12px;font-weight:600;color:var(--ink)}
+.forecast-method ul{padding-left:18px}
+@media(max-width:760px){.forecast-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:420px){.forecast-summary{grid-template-columns:1fr 1fr;gap:7px}.forecast-summary>div{padding:10px}}
