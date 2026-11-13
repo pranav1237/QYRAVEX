@@ -155,7 +155,7 @@ class MarketProvider(HttpProvider):
             candidates.append({
                 "symbol": symbol,
                 "name": item.get("longname") or item.get("shortname") or symbol,
-                "exchange": item.get("exchange") or item.get("exchDisp") or "Exchange not supplied",
+                "exchange": item.get("exchDisp") or item.get("exchange") or "Exchange not supplied",
                 "exchange_code": item.get("exch") or "",
                 "quote_type": item.get("quoteType"),
                 "currency": item.get("currency"),
