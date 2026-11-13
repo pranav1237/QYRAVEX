@@ -133,9 +133,18 @@ class SecProvider(HttpProvider):
 class MarketProvider(HttpProvider):
     """Yahoo chart first, Stooq daily CSV fallback; both are live public endpoints."""
 
+    # Common abbreviated search terms that Yahoo can misinterpret as unrelated
+    # US tickers. Resolve these to the issuer name before asking its symbol directory.
+    _issuer_search_aliases = {
+        "SOUTH": "South Indian Bank",
+        "SOUTH INDIAN BANK LIMITED": "South Indian Bank",
+        "SOUTH INDIAN BANK LTD": "South Indian Bank",
+    }
+
     def search_symbols(self, query: str, limit: int = 8) -> list[dict[str, Any]]:
         """Resolve a company name or ticker to exchange-qualified Yahoo symbols."""
         cleaned = " ".join(query.split())
+        cleaned = self._issuer_search_aliases.get(cleaned.upper(), cleaned)
         if not cleaned:
             return []
         data = self.get_json(
