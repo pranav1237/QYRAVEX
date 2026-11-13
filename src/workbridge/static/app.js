@@ -23,16 +23,14 @@ async function api(path, options = {}) {
   return payload;
 }
 function showView(name) {
-  const viewName = name === "predictor" ? "research" : name;
+  const validViews = new Set(["research", "predictor", "history", "benchmarks"]);
+  const viewName = validViews.has(name) ? name : "research";
   $(".view").forEach(view => view.classList.toggle("active", view.id === `view-${viewName}`));
-  $(".nav-item").forEach(button => button.classList.toggle("active", button.dataset.view === name));
-  $("#crumb-current").textContent = ({research:"Research desk",predictor:"AI stock predictor",history:"Research history",benchmarks:"Benchmarks"})[name];
-  if (name === "history") loadHistory();
-  if (name === "benchmarks") loadBenchmarks();
-  if (name === "predictor") {
-    $("#stock-visualizer").scrollIntoView({behavior:"smooth", block:"start"});
-    $("#stock-symbol-input")?.focus({preventScroll:true});
-  }
+  $(".nav-item").forEach(button => button.classList.toggle("active", button.dataset.view === viewName));
+  $("#crumb-current").textContent = ({research:"Research desk",predictor:"AI stock predictor",history:"Research history",benchmarks:"Benchmarks"})[viewName];
+  if (viewName === "history") loadHistory();
+  if (viewName === "benchmarks") loadBenchmarks();
+  if (viewName === "predictor") $("#stock-symbol-input")?.focus({preventScroll:true});
 }
 $$(".nav-item").forEach(button => button.addEventListener("click", () => showView(button.dataset.view)));
 $$(".hint").forEach(button => button.addEventListener("click", () => { $("#question").value = button.dataset.prompt; $("#question").focus(); }));
