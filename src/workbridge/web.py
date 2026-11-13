@@ -1,4 +1,4 @@
-"""Browser API and static dashboard for Zetheta WorkBridge."""
+"""Browser API and static dashboard for QYRAVEX."""
 from __future__ import annotations
 
 import re
@@ -22,9 +22,9 @@ from .tools import ToolRegistry
 STATIC_DIR = Path(__file__).parent / "static"
 
 app = FastAPI(
-    title="Zetheta WorkBridge",
+    title="QYRAVEX",
     version="0.2.0",
-    description="Evidence-aware financial research workspace",
+    description="QYRAVEX autonomous, evidence-aware financial research workspace",
 )
 
 
