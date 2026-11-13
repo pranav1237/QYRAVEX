@@ -6,7 +6,7 @@ import math
 import time
 from collections.abc import Callable
 from typing import Any
-from urllib.parse import quote
+from urllib.parse import quote as url_quote
 
 from .config import refresh_optional_api_keys, settings
 from .memory import MemoryStore
@@ -174,7 +174,7 @@ class ToolRegistry:
         exchange = meta.get("fullExchangeName") or meta.get("exchangeName")
         provider = meta.get("dataProvider", "Yahoo Finance")
         source_url = (
-            f"https://finance.yahoo.com/quote/{quote(resolved_symbol)}"
+            f"https://finance.yahoo.com/quote/{url_quote(resolved_symbol)}"
             if provider == "Yahoo Finance"
             else f"https://stooq.com/q/?s={resolved_symbol.lower()}.us"
         )
@@ -217,7 +217,7 @@ class ToolRegistry:
         source_url = raw.data.get("source_url") or (
             f"https://stooq.com/q/?s={resolved_symbol.lower()}.us"
             if provider == "Stooq"
-            else f"https://finance.yahoo.com/quote/{quote(resolved_symbol)}"
+            else f"https://finance.yahoo.com/quote/{url_quote(resolved_symbol)}"
         )
         ev = _evidence("technical_summary", f"{resolved_symbol} price return over {period}: {data['period_return']:.2%}",
                        data, f"Calculated from {provider} daily close observations",
