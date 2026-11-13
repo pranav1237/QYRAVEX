@@ -27,6 +27,9 @@ def test_dashboard_assets_are_served():
     assert 'id="stock-load"' in page.text
     assert 'id="stock-forecast-chart"' in page.text
     assert 'id="stock-candidates"' in page.text
+    assert 'id="view-predictor"' in page.text
+    assert 'id="stock-visualizer"' in page.text
+    assert page.text.index('id="view-predictor"') < page.text.index('id="stock-visualizer"') < page.text.index('id="view-history"')
 
 
 def test_benchmark_api_returns_all_challenges():
