@@ -110,3 +110,8 @@ body{background:radial-gradient(ellipse at 86% 3%,#dcebd7 0,transparent 28%),lin
   white-space: pre-wrap;
   line-height: 1.55;
 }
+
+/* QYRAVEX predictor navigation and partial-news warning */
+#stock-visualizer{scroll-margin-top:22px}
+.execution-item.warning{background:#fff9ef;border-color:#f0dfc3}
+.execution-mark.warn{background:#fff0d9;color:#a96a25}
