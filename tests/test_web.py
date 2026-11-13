@@ -18,6 +18,13 @@ def test_dashboard_assets_are_served():
     response = client.get("/app.js")
     assert response.status_code == 200
     assert "runResearch" in response.text
+    assert "loadMarketForecast" in response.text
+    assert "drawForecastChart" in response.text
+
+    page = client.get("/")
+    assert 'id="stock-load"' in page.text
+    assert 'id="stock-forecast-chart"' in page.text
+    assert 'id="stock-candidates"' in page.text
 
 
 def test_benchmark_api_returns_all_challenges():
