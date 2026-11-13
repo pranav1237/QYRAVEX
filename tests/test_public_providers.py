@@ -212,3 +212,44 @@ def test_alpha_vantage_news_is_normalized(monkeypatch):
     result = provider._alpha_vantage_news("SOUTHBANK.NS", 10)
     assert result["articles"][0]["title"].startswith("South Indian Bank")
     assert result["articles"][0]["source"]["name"] == "Example Finance"
+
+
+
+def test_ai_research_provider_calls_all_configured_model_apis(monkeypatch):
+    from types import SimpleNamespace
+
+    import workbridge.providers as providers_module
+
+    monkeypatch.setattr(
+        providers_module, "settings",
+        SimpleNamespace(
+            openai_api_key="openai-test", gemini_api_key="gemini-test",
+            anthropic_api_key="anthropic-test",
+        ),
+    )
+    monkeypatch.setattr(providers_module, "refresh_optional_api_keys", lambda: None)
+
+    class FakeResponse:
+        def __init__(self, payload):
+            self.payload = payload
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return self.payload
+
+    def fake_post(url, **kwargs):
+        if "api.openai.com" in url:
+            return FakeResponse({"choices": [{"message": {"content": "OpenAI review"}}]})
+        if "generativelanguage.googleapis.com" in url:
+            return FakeResponse({"candidates": [{"content": {"parts": [{"text": "Gemini review"}]}}]})
+        return FakeResponse({"content": [{"text": "Claude review"}]})
+
+    monkeypatch.setattr(providers_module.httpx, "post", fake_post)
+    result = providers_module.AIResearchProvider().analyze(
+        company="South Indian Bank", symbol="SOUTHBANK.NS", horizon=20,
+        market_facts={"latest_close": 25.0}, articles=[],
+    )
+    assert result["successful_providers"] == ["OpenAI", "Google Gemini", "Anthropic Claude"]
+    assert len(result["analyses"]) == 3
