@@ -167,25 +167,31 @@ class ToolRegistry:
         records = [{"timestamp": timestamps[i], "close": quote["close"][i]}
                    for i in range(min(len(timestamps), len(quote.get("close", []))))
                    if quote["close"][i] is not None]
-        provider = row.get("meta", {}).get("dataProvider", "Yahoo Finance")
+        meta = row.get("meta", {})
+        resolved_symbol = meta.get("symbol") or symbol.upper()
+        company = meta.get("longName") or meta.get("shortName")
+        exchange = meta.get("fullExchangeName") or meta.get("exchangeName")
+        provider = meta.get("dataProvider", "Yahoo Finance")
         source_url = (
-            f"https://finance.yahoo.com/quote/{symbol.upper()}"
+            f"https://finance.yahoo.com/quote/{quote(resolved_symbol)}"
             if provider == "Yahoo Finance"
-            else f"https://stooq.com/q/?s={symbol.lower()}.us"
+            else f"https://stooq.com/q/?s={resolved_symbol.lower()}.us"
         )
         ev = _evidence(
             "price_history",
-            f"Retrieved {len(records)} daily closes for {symbol.upper()} from {provider}",
+            f"Retrieved {len(records)} daily closes for {resolved_symbol} from {provider}"
+            + (f" ({company}, {exchange})" if company or exchange else ""),
             records[-5:],
             provider + " daily price history",
             source_url,
-            symbol.upper(),
+            company or resolved_symbol,
             period,
-            row.get("meta", {}).get("currency", "USD"),
+            meta.get("currency", "USD"),
         )
-        return ToolResult(tool="price_history", success=True, data={"symbol": symbol.upper(),
-                          "currency": row.get("meta", {}).get("currency"),
-                          "provider": row.get("meta", {}).get("dataProvider", "Yahoo Finance"),
+        return ToolResult(tool="price_history", success=True, data={"symbol": resolved_symbol,
+                          "company": company, "exchange": exchange,
+                          "currency": meta.get("currency"),
+                          "provider": provider, "source_url": source_url,
                           "closes": closes, "records": records}, evidence=[ev])
 
     def technical_summary(self, symbol: str, period: str = "1y") -> ToolResult:
@@ -206,14 +212,15 @@ class ToolRegistry:
                 "annualized_volatility": volatility, "max_drawdown": max_dd,
                 "latest_close": closes[-1]}
         provider = raw.data.get("provider", "Yahoo Finance")
-        source_url = (
-            f"https://stooq.com/q/?s={symbol.lower()}.us"
+        resolved_symbol = raw.data.get("symbol", symbol.upper())
+        source_url = raw.data.get("source_url") or (
+            f"https://stooq.com/q/?s={resolved_symbol.lower()}.us"
             if provider == "Stooq"
-            else f"https://finance.yahoo.com/quote/{symbol.upper()}"
+            else f"https://finance.yahoo.com/quote/{quote(resolved_symbol)}"
         )
-        ev = _evidence("technical_summary", f"{symbol.upper()} price return over {period}: {data['period_return']:.2%}",
+        ev = _evidence("technical_summary", f"{resolved_symbol} price return over {period}: {data['period_return']:.2%}",
                        data, f"Calculated from {provider} daily close observations",
-                       source_url, symbol.upper(), period)
+                       source_url, raw.data.get("company") or resolved_symbol, period)
         return ToolResult(tool="technical_summary", success=True, data=data, evidence=[ev])
 
     def company_profile(self, symbol: str) -> ToolResult:
