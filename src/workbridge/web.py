@@ -204,8 +204,14 @@ def market_forecast(symbol: str, horizon: int = 20) -> dict[str, Any]:
         except ProviderError as exc:
             news_error = str(exc)
         articles = news_data.get("articles", [])
-        positive_terms = {"growth", "beat", "beats", "upgrade", "profit", "surge", "record", "approval", "contract", "buyback", "strong", "expands"}
-        negative_terms = {"loss", "miss", "misses", "downgrade", "lawsuit", "fraud", "probe", "decline", "cuts", "debt", "recall", "weak", "warning", "layoff"}
+        positive_terms = {
+            "growth", "beat", "beats", "upgrade", "profit", "surge", "record",
+            "approval", "contract", "buyback", "strong", "expands",
+        }
+        negative_terms = {
+            "loss", "miss", "misses", "downgrade", "lawsuit", "fraud", "probe",
+            "decline", "cuts", "debt", "recall", "weak", "warning", "layoff",
+        }
         positive = negative = 0
         for article in articles:
             words = set(re.findall(r"[a-z]+", (article.get("title") or "").lower()))
@@ -250,11 +256,18 @@ def market_forecast(symbol: str, horizon: int = 20) -> dict[str, Any]:
                 "coverage_note": news_data.get("coverage_note") or "News search may be incomplete.",
                 "error": news_error,
             },
-            "method": "Explainable ensemble: weighted 20/60/252-session log-return drift, shrinkage toward zero, 60-session realized volatility and a capped headline-keyword adjustment.",
+            "method": (
+                "Explainable ensemble: weighted 20/60/252-session log-return drift, "
+                "shrinkage toward zero, 60-session realized volatility and a capped "
+                "headline-keyword adjustment."
+            ),
             "limitations": [
                 "This is a statistical scenario model, not a guarantee or personalized investment advice.",
                 "Headline keyword sentiment is a weak proxy; headlines can be misleading, duplicated or context-dependent.",
-                "The interval assumes recent volatility is informative and does not model sudden gaps, corporate actions or all macro shocks.",
+                (
+                    "The interval assumes recent volatility is informative and does not model "
+                    "sudden gaps, corporate actions or all macro shocks."
+                ),
                 "Past prices and indexed news cannot reliably predict future returns.",
             ],
             "sources": [{
