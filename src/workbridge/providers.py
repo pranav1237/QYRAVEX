@@ -423,8 +423,10 @@ class NewsProvider(HttpProvider):
             if found:
                 articles.extend(found)
                 providers.append("GDELT DOC 2.0")
-        except ProviderError as exc:
-            errors.append(f"GDELT: {exc}")
+        except (ProviderError, httpx.HTTPError, ValueError, TypeError, KeyError) as exc:
+            # Keep fallback discovery alive even when a transport mock or an
+            # unexpected HTTP client path surfaces the raw httpx exception.
+            errors.append(f"GDELT: {type(exc).__name__}: {exc}")
 
         try:
             found = self._google_news_rss(query, limit)["articles"]
