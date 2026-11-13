@@ -137,6 +137,8 @@ class MarketProvider(HttpProvider):
     # US tickers. Resolve these to the issuer name before asking its symbol directory.
     _issuer_search_aliases = {
         "SOUTH": "South Indian Bank",
+        "SOUTHBANK": "South Indian Bank",
+        "SOUTH BANK": "South Indian Bank",
         "SOUTH INDIAN BANK LIMITED": "South Indian Bank",
         "SOUTH INDIAN BANK LTD": "South Indian Bank",
     }
