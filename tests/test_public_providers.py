@@ -206,7 +206,7 @@ def test_news_provider_returns_diagnostic_empty_result_instead_of_raising(monkey
     monkeypatch.setattr(provider, "_google_news_rss", lambda *args, **kwargs: (_ for _ in ()).throw(ProviderError("no articles")))
     monkeypatch.setattr(provider, "_bing_news_rss", lambda *args, **kwargs: (_ for _ in ()).throw(ProviderError("no articles")))
     monkeypatch.setattr(provider, "_yahoo_finance_rss", lambda *args, **kwargs: (_ for _ in ()).throw(ProviderError("no articles")))
-    result = provider.search("SouthBank latest reported revenue", 10)
+    result = provider.search("SouthBank latest filings no match", 10)
     assert result["articles"] == []
     assert result["partial_errors"]
     assert "not evidence that the issuer has no recent news" not in result.get("coverage_note", "")
