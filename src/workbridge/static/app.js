@@ -126,7 +126,8 @@ function renderReport(data) {
     ?.find(token => !ignoredTickerWords.has(token));
   const symbol = stockStep?.args?.symbol
     || (companyMatch ? alias[companyMatch[1]] : null)
-    || tickerMatch;
+    || tickerMatch
+    || question;
   if (symbol) loadMarketChart(symbol, "1y", question);
   else {
     const chart = $("#stock-visualizer");
