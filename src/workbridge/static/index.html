@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=qyravex-multi-ai-news-20261113">
+  <link rel="stylesheet" href="/styles.css?v=qyravex-predictor-visible-news-fallback-20261113">
 </head>
 <body>
   <div class="app-shell">
@@ -19,6 +19,7 @@
       </a>
       <div class="workspace-label">WORKSPACE</div>
       <button class="nav-item active" data-view="research"><span class="nav-icon">⌕</span> Research desk</button>
+      <button class="nav-item" data-view="predictor"><span class="nav-icon">⌁</span> AI stock predictor</button>
       <button class="nav-item" data-view="history"><span class="nav-icon">◷</span> Research history</button>
       <button class="nav-item" data-view="benchmarks"><span class="nav-icon">▦</span> Benchmarks</button>
       <div class="sidebar-bottom">
@@ -68,7 +69,7 @@
 
           <section class="panel evidence-panel" id="stock-visualizer">
             <div class="panel-head">
-              <div><span class="step-tag">LIVE</span><span class="panel-title">Live market visualizer</span></div>
+              <div><span class="step-tag">LIVE + AI</span><span class="panel-title">AI stock predictor & live market visualizer</span></div>
               <div style="display:flex;gap:6px;flex-wrap:wrap">
                 <button class="ghost-btn" type="button" data-chart-period="1mo">1M</button>
                 <button class="ghost-btn" type="button" data-chart-period="3mo">3M</button>
@@ -83,7 +84,7 @@
               <button id="stock-load" class="primary-btn" type="button"><span>Load stock</span><span class="arrow">↗</span></button>
             </div>
             <select id="stock-candidates" hidden aria-label="Choose verified stock listing" style="width:100%;margin:0 0 10px"></select>
-            <div id="stock-chart-status" class="muted" style="margin:8px 0 12px">Search a company or ticker to load verified daily market data.</div>
+            <div id="stock-chart-status" class="muted" style="margin:8px 0 12px">Enter a company or ticker. QYRAVEX loads verified daily prices and automatically builds a 1-week, 1-month and 3-month scenario forecast with available independent AI reviews.</div>
             <div style="width:100%;height:280px;position:relative"><canvas id="stock-chart" aria-label="Stock price history chart" role="img" style="width:100%;height:100%"></canvas></div>
             <div id="stock-chart-summary" class="muted" style="display:flex;gap:18px;flex-wrap:wrap;margin-top:12px"></div>
             <div id="stock-forecast" hidden style="margin-top:22px;padding-top:18px;border-top:1px solid var(--line)">
@@ -120,6 +121,6 @@
     </main>
   </div>
   <div id="toast" class="toast"></div>
-  <script src="/app.js?v=qyravex-multi-ai-news-20261113"></script>
+  <script src="/app.js?v=qyravex-predictor-visible-news-fallback-20261113"></script>
 </body>
 </html>
