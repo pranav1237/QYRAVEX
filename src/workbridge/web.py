@@ -17,7 +17,7 @@ from .agent import ResearchAgent
 from .benchmarks import run_challenges
 from .config import refresh_optional_api_keys, settings
 from .memory import MemoryStore
-from .providers import MarketProvider, NewsProvider, ProviderError
+from .providers import AIResearchProvider, MarketProvider, NewsProvider, ProviderError
 from .synthesis import synthesize
 from .tools import ToolRegistry
 
@@ -213,7 +213,7 @@ def market_forecast(symbol: str, horizon: int = 20) -> dict[str, Any]:
         news_data: dict[str, Any] = {"articles": [], "provider": "Unavailable", "providers": []}
         news_error = None
         try:
-            news_data = NewsProvider().search(f'"{company}" stock', 20)
+            news_data = NewsProvider().search(f'{company} {resolved_symbol} latest results earnings outlook', 20)
         except ProviderError as exc:
             news_error = str(exc)
         articles = news_data.get("articles", [])
@@ -265,6 +265,19 @@ def market_forecast(symbol: str, horizon: int = 20) -> dict[str, Any]:
         backtest_accuracy = (
             backtest_hits / backtest_samples if backtest_samples >= 3 else None
         )
+        ai_review = AIResearchProvider().analyze(
+            company=company, symbol=resolved_symbol, horizon=horizon,
+            market_facts={
+                "latest_close": last_price, "expected_price": expected,
+                "expected_return_pct": expected_return * 100,
+                "momentum_20d_pct": momentum20 * 100,
+                "momentum_60d_pct": momentum60 * 100,
+                "annualized_volatility_pct": daily_volatility * math.sqrt(252) * 100,
+                "historical_observations": len(closes),
+                "price_data_provider": provider,
+            },
+            articles=articles,
+        )
         outlook = "Positive bias" if expected_return > 0.01 else "Negative bias" if expected_return < -0.01 else "Neutral / mixed"
         coverage = min(1.0, len(closes) / 252)
         confidence_score = round(0.35 + 0.40 * coverage + (0.10 if len(articles) >= 5 else 0.04 if articles else 0.0), 2)
@@ -295,6 +308,7 @@ def market_forecast(symbol: str, horizon: int = 20) -> dict[str, Any]:
                     "not a measure of expected return accuracy."
                 ),
             },
+            "ai_review": ai_review,
             "news": {
                 "article_count": len(articles), "providers": news_data.get("providers", []),
                 "sentiment_score": sentiment_score, "positive_signal_terms": positive,
