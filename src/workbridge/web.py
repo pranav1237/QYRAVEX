@@ -149,7 +149,7 @@ def market_chart(symbol: str, period: str = "1y") -> dict[str, Any]:
             "exchange": row.get("meta", {}).get("fullExchangeName") or row.get("meta", {}).get("exchangeName"),
             "currency": row.get("meta", {}).get("currency") or "USD",
             "provider": row.get("meta", {}).get("dataProvider") or "Yahoo Finance",
-            "source_url": f"https://finance.yahoo.com/quote/{ticker}",
+            "source_url": f"https://finance.yahoo.com/quote/{row.get('meta', {}).get('symbol') or ticker}",
             "period": period,
             "points": points,
             "latest": points[-1],
@@ -200,7 +200,7 @@ def market_forecast(symbol: str, horizon: int = 20) -> dict[str, Any]:
         news_data: dict[str, Any] = {"articles": [], "provider": "Unavailable", "providers": []}
         news_error = None
         try:
-            news_data = NewsProvider().search(f'"{company}" OR {resolved_symbol} stock', 20)
+            news_data = NewsProvider().search(f'"{company}" stock', 20)
         except ProviderError as exc:
             news_error = str(exc)
         articles = news_data.get("articles", [])
