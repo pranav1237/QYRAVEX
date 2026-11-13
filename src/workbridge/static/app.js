@@ -126,12 +126,9 @@ function renderReport(data) {
     ?.find(token => !ignoredTickerWords.has(token));
   const symbol = stockStep?.args?.symbol
     || (companyMatch ? alias[companyMatch[1]] : null)
-    || tickerMatch
-    || question;
-  if (symbol) loadMarketChart(symbol, "1y", question);
+    || tickerMatch;
+  if (symbol) loadMarketChart(symbol, "1y", symbol);
   else {
-    const chart = $("#stock-visualizer");
-    if (chart) chart.hidden = true;
     activeChartSymbol = null; activeChartData = null; activeChartQuote = null;
   }
   $("#results").scrollIntoView({behavior:"smooth",block:"start"});
@@ -202,52 +199,133 @@ function drawStockChart(points, currency, liveQuote = activeChartQuote) {
     (liveQuote?.price != null ? `<span>Live quote <b>${escapeHtml(money(liveQuote.price))}</b> · ${escapeHtml(liveQuote.change_percent ?? 0)}%</span>` : "");
 }
 
+async function loadMarketForecast(symbol, horizon = activeForecastHorizon) {
+  activeForecastHorizon = horizon;
+  const panel = $("#stock-forecast");
+  if (!panel || !symbol) return;
+  panel.hidden = false;
+  $("#stock-forecast-status").textContent = "Calculating historical trend and retrieving current news evidence…";
+  $("#stock-forecast-content").innerHTML = "";
+  try {
+    const data = await api("/api/market/" + encodeURIComponent(symbol) + "/forecast?horizon=" + horizon);
+    const currency = data.currency || "USD";
+    const money = value => new Intl.NumberFormat(undefined, {style:"currency",currency,maximumFractionDigits:2}).format(value);
+    const percent = value => (value >= 0 ? "+" : "") + (value * 100).toFixed(2) + "%";
+    const scenarios = data.scenarios || {};
+    const sources = data.sources || [];
+    const news = data.news || {};
+    $("#stock-forecast-status").textContent =
+      (data.company || data.symbol) + " · " + horizon + " trading-day horizon · Built " +
+      new Date(data.generated_at).toLocaleString() + " · " + data.method;
+    const sourceLinks = sources.slice(0,8).map(source =>
+      '<a href="' + escapeHtml(source.url) + '" target="_blank" rel="noopener">' +
+      escapeHtml(source.name) + (source.published_at ? " · " + escapeHtml(source.published_at) : "") + " ↗</a>"
+    ).join("");
+    const limitations = (data.limitations || []).map(item => "<li>" + escapeHtml(item) + "</li>").join("");
+    $("#stock-forecast-content").innerHTML =
+      '<div class="forecast-summary">' +
+        '<div class="forecast-lead"><span>MODEL OUTLOOK</span><strong>' + escapeHtml(data.outlook) +
+        '</strong><small>Expected scenario return ' + escapeHtml(percent(data.expected_return)) + '</small></div>' +
+        '<div class="forecast-metric"><span>BASE SCENARIO</span><strong>' + escapeHtml(money(scenarios.base)) +
+        '</strong><small>Latest close ' + escapeHtml(money(data.latest_close)) + '</small></div>' +
+        '<div class="forecast-metric"><span>BEAR SCENARIO</span><strong>' + escapeHtml(money(scenarios.bear)) +
+        '</strong><small>Approximate lower range</small></div>' +
+        '<div class="forecast-metric"><span>BULL SCENARIO</span><strong>' + escapeHtml(money(scenarios.bull)) +
+        '</strong><small>Approximate upper range</small></div></div>' +
+      '<div class="forecast-detail">' +
+        '<span>20-session momentum <b>' + escapeHtml(percent(data.momentum_20d)) + '</b></span>' +
+        '<span>60-session momentum <b>' + escapeHtml(percent(data.momentum_60d)) + '</b></span>' +
+        '<span>Annualized volatility <b>' + escapeHtml((data.annualized_volatility * 100).toFixed(1)) + '%</b></span>' +
+        '<span>Data coverage score <b>' + Math.round(data.confidence_score * 100) + '%</b></span></div>' +
+      '<p class="forecast-note">' + escapeHtml(data.range_level) + '. ' + escapeHtml(data.confidence_note) + '</p>' +
+      '<div class="forecast-evidence"><strong>News evidence (' + Number(news.article_count || 0) +
+        ' indexed articles)</strong><span>Headline signal: ' +
+        (news.sentiment_score > 0 ? "positive-leaning" : news.sentiment_score < 0 ? "negative-leaning" : "mixed / neutral") +
+        ' · Sources: ' + escapeHtml((news.providers || []).join(", ") || "No news provider returned articles") + '</span>' +
+        (news.error ? '<small>News retrieval note: ' + escapeHtml(news.error) + '</small>' : "") +
+        sourceLinks + '</div>' +
+      '<details class="forecast-method"><summary>How this forecast is calculated and its limitations</summary><p>' +
+        escapeHtml(data.method) + '</p><ul>' + limitations + '</ul></details>';
+  } catch (error) {
+    $("#stock-forecast-status").textContent = "Forecast unavailable: " + error.message;
+    $("#stock-forecast-content").innerHTML = '<p class="muted">The historical chart can still be used. Forecasting requires a valid daily price series with at least 21 observations.</p>';
+  }
+}
+
 async function loadMarketChart(symbol, period = activeChartPeriod, searchQuery = symbol) {
-  activeChartSymbol = symbol;
+  const searchTerm = String(searchQuery || symbol || "").trim();
+  if (!searchTerm) return;
   activeChartPeriod = period;
   const panel = $("#stock-visualizer");
   panel.hidden = false;
-  $("#stock-chart-status").textContent = `Verifying ${searchQuery} against the live symbol directory…`;
+  $("#stock-chart-status").textContent = 'Verifying "' + searchTerm + '" against the live stock directory…';
+  $("#stock-chart-summary").textContent = "";
+  $("#stock-forecast").hidden = true;
   try {
-    let resolvedSymbol = symbol;
+    let resolvedSymbol = String(symbol || searchTerm).trim().toUpperCase();
     let identity = null;
     try {
-      const search = await api(`/api/market/search?q=${encodeURIComponent(searchQuery)}`);
-      const matches = search.matches || [];
-      const exact = matches.find(item => item.symbol.toUpperCase() === String(symbol).toUpperCase());
-      identity = exact || matches.find(item => item.quote_type === "EQUITY") || matches[0] || null;
+      const search = await api("/api/market/search?q=" + encodeURIComponent(searchTerm));
+      const matches = (search.matches || []).filter(item => item.quote_type === "EQUITY" || item.quote_type === "ETF");
+      const normalized = searchTerm.toUpperCase();
+      identity = matches.find(item => item.symbol.toUpperCase() === normalized)
+        || matches.find(item => item.name.toUpperCase() === normalized)
+        || matches.find(item => item.name.toUpperCase().startsWith(normalized))
+        || matches[0] || null;
       if (identity) resolvedSymbol = identity.symbol;
+      else if (!/^[A-Z0-9][A-Z0-9.=-]{0,14}$/i.test(searchTerm)) {
+        throw new Error('No listed stock matched "' + searchTerm + '". Try its exchange ticker, e.g. RELIANCE.NS.');
+      }
     } catch (lookupError) {
-      // A supplied exchange-qualified ticker can still be queried directly if
-      // the symbol directory is temporarily unavailable.
-      console.warn("Symbol directory lookup unavailable:", lookupError.message);
+      if (!/^[A-Z0-9][A-Z0-9.=-]{0,14}$/i.test(searchTerm)) throw lookupError;
+      console.warn("Symbol directory lookup unavailable; trying supplied ticker:", lookupError.message);
     }
-    $("#stock-chart-status").textContent = `Loading verified listing ${resolvedSymbol}…`;
-    const data = await api(`/api/market/${encodeURIComponent(resolvedSymbol)}?period=${encodeURIComponent(period)}`);
+    activeChartSymbol = resolvedSymbol;
+    $("#stock-chart-status").textContent = "Loading verified listing " + resolvedSymbol + "…";
+    const data = await api("/api/market/" + encodeURIComponent(resolvedSymbol) + "?period=" + encodeURIComponent(period));
     activeChartSymbol = data.symbol || resolvedSymbol;
     activeChartData = data.points;
     activeChartCurrency = data.currency;
     activeChartQuote = data.live_quote || null;
     drawStockChart(activeChartData, activeChartCurrency, activeChartQuote);
     const last = new Date(data.latest.timestamp * 1000).toLocaleString();
-    const company = data.company || identity?.name || "";
-    const exchange = data.exchange || identity?.exchange || "";
-    const sourceUrl = data.source_url || identity?.source_url || `https://finance.yahoo.com/quote/${encodeURIComponent(data.symbol)}`;
-    const status = $("#stock-chart-status");
-    status.innerHTML = `${company ? escapeHtml(company) + " · " : ""}${escapeHtml(data.symbol)}${exchange ? " · " + escapeHtml(exchange) : ""} · ${escapeHtml(data.provider)} · ${period.toUpperCase()} · Latest observation ${escapeHtml(last)} · <a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener">Verify source ↗</a>`;
+    const company = data.company || (identity && identity.name) || "";
+    const exchange = data.exchange || (identity && identity.exchange) || "";
+    const sourceUrl = data.source_url || (identity && identity.source_url) || "https://finance.yahoo.com/quote/" + encodeURIComponent(data.symbol);
+    $("#stock-chart-status").innerHTML = (company ? escapeHtml(company) + " · " : "") +
+      escapeHtml(data.symbol) + (exchange ? " · " + escapeHtml(exchange) : "") + " · " +
+      escapeHtml(data.provider) + " · " + period.toUpperCase() + " · Latest observation " +
+      escapeHtml(last) + ' · <a href="' + escapeHtml(sourceUrl) + '" target="_blank" rel="noopener">Verify source ↗</a>';
+    $("#stock-symbol-input").value = data.symbol || resolvedSymbol;
+    await loadMarketForecast(activeChartSymbol, activeForecastHorizon);
   } catch (error) {
-    $("#stock-chart-status").textContent = `Market chart unavailable: ${error.message}`;
-    $("#stock-chart-summary").textContent = "No chart was drawn because live price observations could not be retrieved. Check the ticker and exchange, or search using the company's full name.";
+    activeChartData = null;
+    $("#stock-chart-status").textContent = "Market chart unavailable: " + error.message;
+    $("#stock-chart-summary").textContent = "No verified daily price observations were returned. Check the company name or exchange-qualified ticker.";
+    $("#stock-forecast").hidden = true;
   }
 }
 
+let activeForecastHorizon = 20;
+$("#stock-load")?.addEventListener("click", () => {
+  const query = $("#stock-symbol-input").value.trim();
+  if (!query) { toast("Enter a company name or ticker first."); return; }
+  loadMarketChart(query, activeChartPeriod, query);
+});
+$("#stock-symbol-input")?.addEventListener("keydown", event => {
+  if (event.key === "Enter") $("#stock-load").click();
+});
 $("#stock-visualizer [data-chart-refresh]")?.addEventListener("click", () => {
   if (activeChartSymbol) loadMarketChart(activeChartSymbol, activeChartPeriod);
 });
-
-$$("#stock-visualizer [data-chart-period]").forEach(button => {
+$$("[data-chart-period]").forEach(button => {
   button.addEventListener("click", () => {
     if (activeChartSymbol) loadMarketChart(activeChartSymbol, button.dataset.chartPeriod);
+  });
+});
+$$("[data-forecast-horizon]").forEach(button => {
+  button.addEventListener("click", () => {
+    if (activeChartSymbol) loadMarketForecast(activeChartSymbol, Number(button.dataset.forecastHorizon));
   });
 });
 window.addEventListener("resize", () => {
