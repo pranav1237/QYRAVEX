@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=qyravex-predictor-visible-news-fallback-20261113">
+  <link rel="stylesheet" href="/styles.css?v=qyravex-dedicated-predictor-view-20261113">
 </head>
 <body>
   <div class="app-shell">
@@ -67,40 +67,7 @@
           </section>
         </div>
 
-          <section class="panel evidence-panel" id="stock-visualizer">
-            <div class="panel-head">
-              <div><span class="step-tag">LIVE + AI</span><span class="panel-title">AI stock predictor & live market visualizer</span></div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap">
-                <button class="ghost-btn" type="button" data-chart-period="1mo">1M</button>
-                <button class="ghost-btn" type="button" data-chart-period="3mo">3M</button>
-                <button class="ghost-btn" type="button" data-chart-period="6mo">6M</button>
-                <button class="ghost-btn" type="button" data-chart-period="1y">1Y</button>
-                <button class="ghost-btn" type="button" data-chart-period="5y">5Y</button>
-                <button class="ghost-btn" type="button" data-chart-refresh>Refresh ↻</button>
-              </div>
-            </div>
-            <div style="display:flex;gap:10px;flex-wrap:wrap;margin:10px 0">
-              <input id="stock-symbol-input" type="text" maxlength="100" placeholder="Enter company name or ticker (e.g. RELIANCE, MSFT)" aria-label="Company name or stock ticker" style="flex:1;min-width:220px">
-              <button id="stock-load" class="primary-btn" type="button"><span>Load stock</span><span class="arrow">↗</span></button>
-            </div>
-            <select id="stock-candidates" hidden aria-label="Choose verified stock listing" style="width:100%;margin:0 0 10px"></select>
-            <div id="stock-chart-status" class="muted" style="margin:8px 0 12px">Enter a company or ticker. QYRAVEX loads verified daily prices and automatically builds a 1-week, 1-month and 3-month scenario forecast with available independent AI reviews.</div>
-            <div style="width:100%;height:280px;position:relative"><canvas id="stock-chart" aria-label="Stock price history chart" role="img" style="width:100%;height:100%"></canvas></div>
-            <div id="stock-chart-summary" class="muted" style="display:flex;gap:18px;flex-wrap:wrap;margin-top:12px"></div>
-            <div id="stock-forecast" hidden style="margin-top:22px;padding-top:18px;border-top:1px solid var(--line)">
-              <div class="panel-head"><div><span class="step-tag">AI</span><span class="panel-title">AI market outlook</span></div>
-                <div style="display:flex;gap:6px;flex-wrap:wrap">
-                  <button class="ghost-btn" type="button" data-forecast-horizon="5">1W</button>
-                  <button class="ghost-btn" type="button" data-forecast-horizon="20">1M</button>
-                  <button class="ghost-btn" type="button" data-forecast-horizon="60">3M</button>
-                </div>
-              </div>
-              <div id="stock-forecast-status" class="muted">Building forecast from historical records and current indexed news…</div>
-              <div style="width:100%;height:190px;position:relative;margin:12px 0"><canvas id="stock-forecast-chart" aria-label="Historical prices and forecast scenarios" role="img" style="width:100%;height:100%"></canvas></div>
-              <div class="forecast-legend muted"><span>— Historical close</span><span>┄ Base projection</span><span>┄ Scenario range</span></div>
-              <div id="stock-forecast-content"></div>
-            </div>
-          </section>
+
 
         <section class="results hidden" id="results">
           <div class="results-head"><div><div class="eyebrow">RESEARCH OUTPUT</div><h2 id="result-title">Research report</h2></div><div class="result-actions"><span id="result-state" class="result-state">COMPLETED</span><button id="copy-report" class="ghost-btn">Copy summary ↗</button></div></div>
@@ -113,6 +80,46 @@
           <section class="panel evidence-panel"><div class="panel-head"><div><span class="step-tag">04</span><span class="panel-title">Evidence register</span></div><span id="evidence-count" class="muted">0 items</span></div><div id="evidence-list" class="evidence-list"></div></section>
           <section class="panel findings-panel"><div class="panel-head"><div><span class="step-tag">05</span><span class="panel-title">Findings</span></div></div><div id="findings-list" class="findings-list"></div></section>
         </section>
+      </section>
+
+      <section class="view predictor-view" id="view-predictor">
+        <div class="page-heading simple">
+          <div><div class="eyebrow">MARKET INTELLIGENCE</div><h1>AI stock predictor<span class="accent">.</span></h1><p>Verified market history, scenario modelling and independent AI evidence reviews.</p></div>
+        </div>
+      <section class="panel evidence-panel" id="stock-visualizer">
+        <div class="panel-head">
+          <div><span class="step-tag">LIVE + AI</span><span class="panel-title">AI stock predictor & live market visualizer</span></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="ghost-btn" type="button" data-chart-period="1mo">1M</button>
+            <button class="ghost-btn" type="button" data-chart-period="3mo">3M</button>
+            <button class="ghost-btn" type="button" data-chart-period="6mo">6M</button>
+            <button class="ghost-btn" type="button" data-chart-period="1y">1Y</button>
+            <button class="ghost-btn" type="button" data-chart-period="5y">5Y</button>
+            <button class="ghost-btn" type="button" data-chart-refresh>Refresh ↻</button>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin:10px 0">
+          <input id="stock-symbol-input" type="text" maxlength="100" placeholder="Enter company name or ticker (e.g. RELIANCE, MSFT)" aria-label="Company name or stock ticker" style="flex:1;min-width:220px">
+          <button id="stock-load" class="primary-btn" type="button"><span>Load stock</span><span class="arrow">↗</span></button>
+        </div>
+        <select id="stock-candidates" hidden aria-label="Choose verified stock listing" style="width:100%;margin:0 0 10px"></select>
+        <div id="stock-chart-status" class="muted" style="margin:8px 0 12px">Enter a company or ticker. QYRAVEX loads verified daily prices and automatically builds a 1-week, 1-month and 3-month scenario forecast with available independent AI reviews.</div>
+        <div style="width:100%;height:280px;position:relative"><canvas id="stock-chart" aria-label="Stock price history chart" role="img" style="width:100%;height:100%"></canvas></div>
+        <div id="stock-chart-summary" class="muted" style="display:flex;gap:18px;flex-wrap:wrap;margin-top:12px"></div>
+        <div id="stock-forecast" hidden style="margin-top:22px;padding-top:18px;border-top:1px solid var(--line)">
+          <div class="panel-head"><div><span class="step-tag">AI</span><span class="panel-title">AI market outlook</span></div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <button class="ghost-btn" type="button" data-forecast-horizon="5">1W</button>
+              <button class="ghost-btn" type="button" data-forecast-horizon="20">1M</button>
+              <button class="ghost-btn" type="button" data-forecast-horizon="60">3M</button>
+            </div>
+          </div>
+          <div id="stock-forecast-status" class="muted">Building forecast from historical records and current indexed news…</div>
+          <div style="width:100%;height:190px;position:relative;margin:12px 0"><canvas id="stock-forecast-chart" aria-label="Historical prices and forecast scenarios" role="img" style="width:100%;height:100%"></canvas></div>
+          <div class="forecast-legend muted"><span>— Historical close</span><span>┄ Base projection</span><span>┄ Scenario range</span></div>
+          <div id="stock-forecast-content"></div>
+        </div>
+      </section>
       </section>
 
       <section class="view" id="view-history"><div class="page-heading simple"><div><div class="eyebrow">YOUR RESEARCH TRAIL</div><h1>Research history<span class="accent">.</span></h1><p>Recent research sessions saved to your local SQLite memory.</p></div></div><div class="panel table-panel"><div id="history-list" class="history-list"><div class="empty-state">Loading saved sessions…</div></div></div></section>
