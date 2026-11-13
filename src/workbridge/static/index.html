@@ -4,18 +4,18 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f3f6f1">
-  <title>WorkBridge — Financial Intelligence Workspace</title>
+  <title>QYRAVEX — Autonomous Financial Intelligence</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=workbridge-studio-20261112">
+  <link rel="stylesheet" href="/styles.css?v=qyravex-orbit-20261113">
 </head>
 <body>
   <div class="app-shell">
     <aside class="sidebar">
       <a class="brand" href="/">
-        <span class="brand-mark"><span></span><span></span><span></span></span>
-        <span>zetheta<span class="brand-light">/workbridge</span></span>
+        <span class="qyravex-mark" aria-hidden="true"><span class="qyravex-mark-core"></span><span class="qyravex-mark-orbit"></span><span class="qyravex-mark-spark"></span></span>
+        <span class="brand-wordmark">QYRAVEX</span>
       </a>
       <div class="workspace-label">WORKSPACE</div>
       <button class="nav-item active" data-view="research"><span class="nav-icon">⌕</span> Research desk</button>
@@ -27,21 +27,21 @@
           <strong id="system-status">Connecting…</strong>
           <span id="provider-count">Checking data providers</span>
         </div>
-        <div class="sidebar-foot">WORKBRIDGE <span>v0.2.0</span><br><small>Evidence before opinions.</small></div>
+        <div class="sidebar-foot">QYRAVEX <span>v0.2.0</span><br><small>Evidence before opinions.</small></div>
       </div>
     </aside>
 
     <main class="main">
       <header class="topbar">
         <div class="crumb">Workspace <span>/</span> <b id="crumb-current">Research desk</b></div>
-        <div class="top-actions"><span class="secure-label">LOCAL SESSION</span><span class="avatar">W</span></div>
+        <div class="top-actions"><span class="secure-label">LOCAL SESSION</span><span class="avatar">Q</span></div>
       </header>
 
       <section class="view active" id="view-research">
         <div class="page-heading">
           <div><div class="eyebrow">INTELLIGENCE, WITH PROVENANCE</div><h1>Research desk<span class="accent">.</span></h1>
-          <p>Ask a question. WorkBridge builds a bounded plan, gathers evidence, and shows what it could—and couldn't—verify.</p></div>
-          <div class="heading-orbit"><div class="orbit o1"></div><div class="orbit o2"></div><div class="orbit-core">W</div></div>
+          <p>Ask a question. QYRAVEX builds a bounded plan, gathers evidence, and shows what it could—and couldn't—verify.</p></div>
+          <div class="heading-orbit"><div class="orbit o1"></div><div class="orbit o2"></div><div class="orbit-core qyravex-hero-core" aria-label="QYRAVEX animated emblem"><span>Q</span><i></i></div></div>
         </div>
 
         <div class="research-layout">
@@ -96,7 +96,7 @@
 
       <section class="view" id="view-history"><div class="page-heading simple"><div><div class="eyebrow">YOUR RESEARCH TRAIL</div><h1>Research history<span class="accent">.</span></h1><p>Recent research sessions saved to your local SQLite memory.</p></div></div><div class="panel table-panel"><div id="history-list" class="history-list"><div class="empty-state">Loading saved sessions…</div></div></div></section>
       <section class="view" id="view-benchmarks"><div class="page-heading simple"><div><div class="eyebrow">RELIABILITY CHECKS</div><h1>Benchmarks<span class="accent">.</span></h1><p>Offline checks for evidence identity, conflicts, confidence and memory behavior.</p></div><button class="ghost-btn" id="refresh-benchmarks">Run checks ↻</button></div><div class="benchmark-summary" id="benchmark-summary"></div><div class="panel table-panel"><div id="benchmark-list" class="benchmark-list"><div class="empty-state">Loading checks…</div></div></div></section>
-      <footer class="main-footer"><span>© ZETHETA WORKBRIDGE</span><span>Evidence-aware financial research</span><span>Built for clarity <b>✳</b></span></footer>
+      <footer class="main-footer"><span>© QYRAVEX</span><span>Evidence-aware financial research</span><span>Built for clarity <b>✳</b></span></footer>
     </main>
   </div>
   <div id="toast" class="toast"></div>
