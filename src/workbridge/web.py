@@ -232,6 +232,30 @@ def market_forecast(symbol: str, horizon: int = 20) -> dict[str, Any]:
         momentum20 = closes[-1] / closes[-21] - 1
         momentum60 = closes[-1] / closes[-min(61, len(closes))] - 1
         expected_return = expected / last_price - 1
+        backtest_horizon = horizon
+        backtest_step = max(1, horizon // 4)
+        backtest_hits = backtest_samples = 0
+        for start_index in range(40, len(closes) - backtest_horizon, backtest_step):
+            training_returns = [
+                math.log(closes[index] / closes[index - 1])
+                for index in range(1, start_index)
+            ][-252:]
+            if len(training_returns) < 20:
+                continue
+            train20, train60 = training_returns[-20:], training_returns[-60:]
+            train_mean20 = sum(train20) / len(train20)
+            train_mean60 = sum(train60) / len(train60)
+            train_mean_long = sum(training_returns) / len(training_returns)
+            predicted_drift = (
+                0.50 * train_mean20 + 0.30 * train_mean60 + 0.20 * train_mean_long
+            ) * 0.50
+            predicted_direction = predicted_drift * backtest_horizon >= 0
+            actual_direction = closes[start_index + backtest_horizon] >= closes[start_index]
+            backtest_hits += predicted_direction == actual_direction
+            backtest_samples += 1
+        backtest_accuracy = (
+            backtest_hits / backtest_samples if backtest_samples >= 3 else None
+        )
         outlook = "Positive bias" if expected_return > 0.01 else "Negative bias" if expected_return < -0.01 else "Neutral / mixed"
         coverage = min(1.0, len(closes) / 252)
         confidence_score = round(0.35 + 0.40 * coverage + (0.10 if len(articles) >= 5 else 0.04 if articles else 0.0), 2)
@@ -253,6 +277,15 @@ def market_forecast(symbol: str, horizon: int = 20) -> dict[str, Any]:
             "momentum_20d": momentum20, "momentum_60d": momentum60, "outlook": outlook,
             "confidence_score": confidence_score,
             "confidence_note": "Data-coverage score, not the probability that the forecast will be correct.",
+            "backtest": {
+                "horizon_trading_days": backtest_horizon,
+                "samples": backtest_samples,
+                "directional_accuracy": backtest_accuracy,
+                "note": (
+                    "Walk-forward, price-only directional hit rate on earlier observations; "
+                    "not a measure of expected return accuracy."
+                ),
+            },
             "news": {
                 "article_count": len(articles), "providers": news_data.get("providers", []),
                 "sentiment_score": sentiment_score, "positive_signal_terms": positive,
