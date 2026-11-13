@@ -292,6 +292,91 @@ class MacroProvider(HttpProvider):
         return {"observations": observations, "source": "FRED public graph CSV"}
 
 
+class AIResearchProvider:
+    """Optional independent LLM reviewers; they interpret evidence, never invent market data."""
+
+    def analyze(self, *, company: str, symbol: str, horizon: int,
+                market_facts: dict[str, Any], articles: list[dict[str, Any]]) -> dict[str, Any]:
+        refresh_optional_api_keys()
+        evidence = {
+            "issuer": company, "symbol": symbol, "horizon_trading_days": horizon,
+            "quantitative_market_facts": market_facts,
+            "indexed_news": [{
+                "title": item.get("title"), "publisher": (item.get("source") or {}).get("name"),
+                "published_at": item.get("publishedAt"), "url": item.get("url"),
+            } for item in articles[:12]],
+        }
+        prompt = (
+            "You are a cautious equity research analyst. Analyze ONLY the supplied evidence. "
+            "Do not invent facts, prices, financial statements, sources, or probabilities. "
+            "Return concise plain text with: directional_bias (bullish/bearish/mixed/insufficient), "
+            "key_catalysts, material_risks, evidence_gaps, and confidence (low/medium/high). "
+            "If the evidence is insufficient, say so. This is not investment advice.\n"
+            + str(evidence)
+        )
+        results: list[dict[str, str]] = []
+        errors: list[str] = []
+        if settings.openai_api_key:
+            try:
+                response = httpx.post(
+                    "https://api.openai.com/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {settings.openai_api_key}"},
+                    json={"model": "gpt-4.1-mini", "temperature": 0.1,
+                          "messages": [{"role": "user", "content": prompt}]},
+                    timeout=12.0,
+                )
+                response.raise_for_status()
+                content = response.json()["choices"][0]["message"]["content"]
+                if content:
+                    results.append({"provider": "OpenAI", "analysis": str(content)})
+            except (httpx.HTTPError, ValueError, KeyError, TypeError) as exc:
+                errors.append(f"OpenAI: {type(exc).__name__}: {exc}")
+        if settings.gemini_api_key:
+            try:
+                response = httpx.post(
+                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+                    params={"key": settings.gemini_api_key},
+                    json={"contents": [{"parts": [{"text": prompt}]}],
+                          "generationConfig": {"temperature": 0.1}},
+                    timeout=12.0,
+                )
+                response.raise_for_status()
+                content = response.json()["candidates"][0]["content"]["parts"][0]["text"]
+                if content:
+                    results.append({"provider": "Google Gemini", "analysis": str(content)})
+            except (httpx.HTTPError, ValueError, KeyError, TypeError, IndexError) as exc:
+                errors.append(f"Google Gemini: {type(exc).__name__}: {exc}")
+        if settings.anthropic_api_key:
+            try:
+                response = httpx.post(
+                    "https://api.anthropic.com/v1/messages",
+                    headers={"x-api-key": settings.anthropic_api_key,
+                             "anthropic-version": "2023-06-01"},
+                    json={"model": "claude-3-5-haiku-20241022", "max_tokens": 700,
+                          "temperature": 0.1, "messages": [{"role": "user", "content": prompt}]},
+                    timeout=12.0,
+                )
+                response.raise_for_status()
+                content = response.json()["content"][0]["text"]
+                if content:
+                    results.append({"provider": "Anthropic Claude", "analysis": str(content)})
+            except (httpx.HTTPError, ValueError, KeyError, TypeError, IndexError) as exc:
+                errors.append(f"Anthropic Claude: {type(exc).__name__}: {exc}")
+        return {
+            "enabled_providers": [
+                name for name, key in (
+                    ("OpenAI", settings.openai_api_key),
+                    ("Google Gemini", settings.gemini_api_key),
+                    ("Anthropic Claude", settings.anthropic_api_key),
+                ) if key
+            ],
+            "successful_providers": [item["provider"] for item in results],
+            "analyses": results,
+            "errors": errors,
+            "mode": "independent evidence-grounded reviews; model outputs do not alter the quantitative price scenarios",
+        }
+
+
 class NewsProvider(HttpProvider):
     """Aggregate public news indexes and optional licensed news APIs."""
 
