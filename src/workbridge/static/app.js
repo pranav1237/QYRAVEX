@@ -324,6 +324,8 @@ async function loadMarketChart(symbol, period = activeChartPeriod, searchQuery =
   const panel = $("#stock-visualizer");
   panel.hidden = false;
   $("#stock-chart-status").textContent = 'Verifying "' + searchTerm + '" against the live stock directory…';
+  $("#stock-candidates").hidden = true;
+  $("#stock-candidates").innerHTML = "";
   $("#stock-chart-summary").textContent = "";
   $("#stock-forecast").hidden = true;
   try {
@@ -333,10 +335,17 @@ async function loadMarketChart(symbol, period = activeChartPeriod, searchQuery =
       const search = await api("/api/market/search?q=" + encodeURIComponent(searchTerm));
       const matches = (search.matches || []).filter(item => item.quote_type === "EQUITY" || item.quote_type === "ETF");
       const normalized = searchTerm.toUpperCase();
-      identity = matches.find(item => item.symbol.toUpperCase() === normalized)
-        || matches.find(item => item.name.toUpperCase() === normalized)
-        || matches.find(item => item.name.toUpperCase().startsWith(normalized))
-        || matches[0] || null;
+      identity = matches.find(item => item.symbol.toUpperCase() === normalized) || null;
+      if (!identity && matches.length > 1) {
+        const selector = $("#stock-candidates");
+        selector.innerHTML = '<option value="">Choose the correct exchange listing…</option>' +
+          matches.map(item => '<option value="' + escapeHtml(item.symbol) + '">' +
+            escapeHtml(item.symbol + " — " + item.name + " (" + item.exchange + ")") + '</option>').join("");
+        selector.hidden = false;
+        $("#stock-chart-status").textContent = "Several listed instruments match. Choose the correct company and exchange above before loading its chart.";
+        return;
+      }
+      if (!identity && matches.length === 1) identity = matches[0];
       if (identity) resolvedSymbol = identity.symbol;
       else if (!/^[A-Z0-9][A-Z0-9.=-]{0,14}$/i.test(searchTerm)) {
         throw new Error('No listed stock matched "' + searchTerm + '". Try its exchange ticker, e.g. RELIANCE.NS.');
@@ -379,6 +388,9 @@ $("#stock-load")?.addEventListener("click", () => {
 });
 $("#stock-symbol-input")?.addEventListener("keydown", event => {
   if (event.key === "Enter") $("#stock-load").click();
+});
+$("#stock-candidates")?.addEventListener("change", event => {
+  if (event.target.value) loadMarketChart(event.target.value, activeChartPeriod, event.target.value);
 });
 $("#stock-visualizer [data-chart-refresh]")?.addEventListener("click", () => {
   if (activeChartSymbol) loadMarketChart(activeChartSymbol, activeChartPeriod);
