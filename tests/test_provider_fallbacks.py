@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import httpx
-import pytest
 
 from workbridge.providers import HttpProvider, NewsProvider, ProviderError
 
