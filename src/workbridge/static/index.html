@@ -66,6 +66,38 @@
           </section>
         </div>
 
+          <section class="panel evidence-panel" id="stock-visualizer">
+            <div class="panel-head">
+              <div><span class="step-tag">LIVE</span><span class="panel-title">Live market visualizer</span></div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <button class="ghost-btn" type="button" data-chart-period="1mo">1M</button>
+                <button class="ghost-btn" type="button" data-chart-period="3mo">3M</button>
+                <button class="ghost-btn" type="button" data-chart-period="6mo">6M</button>
+                <button class="ghost-btn" type="button" data-chart-period="1y">1Y</button>
+                <button class="ghost-btn" type="button" data-chart-period="5y">5Y</button>
+                <button class="ghost-btn" type="button" data-chart-refresh>Refresh ↻</button>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin:10px 0">
+              <input id="stock-symbol-input" type="text" maxlength="100" placeholder="Enter company name or ticker (e.g. RELIANCE, MSFT)" aria-label="Company name or stock ticker" style="flex:1;min-width:220px">
+              <button id="stock-load" class="primary-btn" type="button"><span>Load stock</span><span class="arrow">↗</span></button>
+            </div>
+            <div id="stock-chart-status" class="muted" style="margin:8px 0 12px">Search a company or ticker to load verified daily market data.</div>
+            <div style="width:100%;height:280px;position:relative"><canvas id="stock-chart" aria-label="Stock price history chart" role="img" style="width:100%;height:100%"></canvas></div>
+            <div id="stock-chart-summary" class="muted" style="display:flex;gap:18px;flex-wrap:wrap;margin-top:12px"></div>
+            <div id="stock-forecast" hidden style="margin-top:22px;padding-top:18px;border-top:1px solid var(--line)">
+              <div class="panel-head"><div><span class="step-tag">AI</span><span class="panel-title">AI market outlook</span></div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                  <button class="ghost-btn" type="button" data-forecast-horizon="5">1W</button>
+                  <button class="ghost-btn" type="button" data-forecast-horizon="20">1M</button>
+                  <button class="ghost-btn" type="button" data-forecast-horizon="60">3M</button>
+                </div>
+              </div>
+              <div id="stock-forecast-status" class="muted">Building forecast from historical records and current indexed news…</div>
+              <div id="stock-forecast-content"></div>
+            </div>
+          </section>
+
         <section class="results hidden" id="results">
           <div class="results-head"><div><div class="eyebrow">RESEARCH OUTPUT</div><h2 id="result-title">Research report</h2></div><div class="result-actions"><span id="result-state" class="result-state">COMPLETED</span><button id="copy-report" class="ghost-btn">Copy summary ↗</button></div></div>
           <div class="metric-grid" id="metric-grid"></div>
@@ -74,21 +106,6 @@
             <section class="panel output-panel"><div class="panel-head"><div><span class="step-tag">03</span><span class="panel-title">Agent execution</span></div></div><div id="execution-list" class="execution-list"></div></section>
           </div>
 
-          <section class="panel evidence-panel" id="stock-visualizer" hidden>
-            <div class="panel-head">
-              <div><span class="step-tag">LIVE</span><span class="panel-title">Stock performance</span></div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap">
-                <button class="ghost-btn" type="button" data-chart-period="1mo">1M</button>
-                <button class="ghost-btn" type="button" data-chart-period="3mo">3M</button>
-                <button class="ghost-btn" type="button" data-chart-period="6mo">6M</button>
-                <button class="ghost-btn" type="button" data-chart-period="1y">1Y</button>
-                <button class="ghost-btn" type="button" data-chart-period="5y">5Y</button><button class="ghost-btn" type="button" data-chart-refresh>Refresh ↻</button>
-              </div>
-            </div>
-            <div id="stock-chart-status" class="muted" style="margin:8px 0 12px">Loading timestamped market data…</div>
-            <div style="width:100%;height:280px;position:relative"><canvas id="stock-chart" aria-label="Stock price history chart" role="img" style="width:100%;height:100%"></canvas></div>
-            <div id="stock-chart-summary" class="muted" style="display:flex;gap:18px;flex-wrap:wrap;margin-top:12px"></div>
-          </section>
           <section class="panel evidence-panel"><div class="panel-head"><div><span class="step-tag">04</span><span class="panel-title">Evidence register</span></div><span id="evidence-count" class="muted">0 items</span></div><div id="evidence-list" class="evidence-list"></div></section>
           <section class="panel findings-panel"><div class="panel-head"><div><span class="step-tag">05</span><span class="panel-title">Findings</span></div></div><div id="findings-list" class="findings-list"></div></section>
         </section>
