@@ -88,6 +88,19 @@ def research(request: ResearchRequest) -> dict[str, Any]:
 
 
 
+@app.get("/api/market/search")
+def market_search(q: str = "") -> dict[str, Any]:
+    """Search Yahoo's symbol directory and return verifiable issuer/listing candidates."""
+    query = " ".join(q.split())
+    if len(query) < 2 or len(query) > 100:
+        raise HTTPException(status_code=422, detail="Enter a company name or ticker (2–100 characters).")
+    try:
+        matches = MarketProvider().search_symbols(query)
+        return {"query": query, "provider": "Yahoo Finance symbol search", "matches": matches}
+    except ProviderError as exc:
+        raise HTTPException(status_code=502, detail=f"Stock symbol search unavailable: {exc}") from exc
+
+
 @app.get("/api/market/{symbol}")
 def market_chart(symbol: str, period: str = "1y") -> dict[str, Any]:
     """Return timestamped public daily prices for the interactive stock chart."""
@@ -129,9 +142,12 @@ def market_chart(symbol: str, period: str = "1y") -> dict[str, Any]:
                 live_quote = None
 
         return {
-            "symbol": ticker,
+            "symbol": row.get("meta", {}).get("symbol") or ticker,
+            "company": row.get("meta", {}).get("longName") or row.get("meta", {}).get("shortName"),
+            "exchange": row.get("meta", {}).get("fullExchangeName") or row.get("meta", {}).get("exchangeName"),
             "currency": row.get("meta", {}).get("currency") or "USD",
             "provider": row.get("meta", {}).get("dataProvider") or "Yahoo Finance",
+            "source_url": f"https://finance.yahoo.com/quote/{ticker}",
             "period": period,
             "points": points,
             "latest": points[-1],
