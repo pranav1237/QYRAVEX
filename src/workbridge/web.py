@@ -1,7 +1,9 @@
 """Browser API and static dashboard for QYRAVEX."""
 from __future__ import annotations
 
+import math
 import re
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -15,7 +17,7 @@ from .agent import ResearchAgent
 from .benchmarks import run_challenges
 from .config import settings
 from .memory import MemoryStore
-from .providers import MarketProvider, ProviderError
+from .providers import MarketProvider, NewsProvider, ProviderError
 from .synthesis import synthesize
 from .tools import ToolRegistry
 
@@ -156,6 +158,113 @@ def market_chart(symbol: str, period: str = "1y") -> dict[str, Any]:
         }
     except ProviderError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.get("/api/market/{symbol}/forecast")
+def market_forecast(symbol: str, horizon: int = 20) -> dict[str, Any]:
+    """Build a transparent, evidence-linked statistical outlook from market history and indexed news."""
+    ticker = symbol.upper().strip()
+    if not re.fullmatch(r"[A-Z0-9.=-]{1,15}", ticker):
+        raise HTTPException(status_code=422, detail="Invalid stock ticker.")
+    if horizon not in {5, 20, 60}:
+        raise HTTPException(status_code=422, detail="Forecast horizon must be 5, 20, or 60 trading days.")
+    try:
+        payload = MarketProvider().price_history(ticker, "1y")
+        rows = payload.get("chart", {}).get("result") or []
+        if not rows:
+            raise ProviderError("No historical price series is available for forecasting.")
+        row = rows[0]
+        quote_row = row.get("indicators", {}).get("quote", [{}])[0]
+        closes = [
+            float(value) for value in quote_row.get("close", [])
+            if value is not None and math.isfinite(float(value)) and float(value) > 0
+        ]
+        if len(closes) < 21:
+            raise ProviderError(f"Forecast needs at least 21 valid daily closes; received {len(closes)}.")
+        meta = row.get("meta", {})
+        resolved_symbol = meta.get("symbol") or ticker
+        company = meta.get("longName") or meta.get("shortName") or resolved_symbol
+        provider = meta.get("dataProvider") or "Yahoo Finance"
+        price_source = f"https://finance.yahoo.com/quote/{resolved_symbol}"
+        log_returns = [math.log(closes[index] / closes[index - 1]) for index in range(1, len(closes))]
+        recent20, recent60, long_window = log_returns[-20:], log_returns[-60:], log_returns[-252:]
+        mean20 = sum(recent20) / len(recent20)
+        mean60 = sum(recent60) / len(recent60)
+        mean_long = sum(long_window) / len(long_window)
+        blended_drift = 0.50 * mean20 + 0.30 * mean60 + 0.20 * mean_long
+        daily_drift = blended_drift * 0.50
+        vol_mean = sum(recent60) / len(recent60)
+        daily_volatility = math.sqrt(
+            sum((value - vol_mean) ** 2 for value in recent60) / max(1, len(recent60) - 1)
+        )
+        news_data: dict[str, Any] = {"articles": [], "provider": "Unavailable", "providers": []}
+        news_error = None
+        try:
+            news_data = NewsProvider().search(f'"{company}" OR {resolved_symbol} stock', 20)
+        except ProviderError as exc:
+            news_error = str(exc)
+        articles = news_data.get("articles", [])
+        positive_terms = {"growth", "beat", "beats", "upgrade", "profit", "surge", "record", "approval", "contract", "buyback", "strong", "expands"}
+        negative_terms = {"loss", "miss", "misses", "downgrade", "lawsuit", "fraud", "probe", "decline", "cuts", "debt", "recall", "weak", "warning", "layoff"}
+        positive = negative = 0
+        for article in articles:
+            words = set(re.findall(r"[a-z]+", (article.get("title") or "").lower()))
+            positive += len(words & positive_terms)
+            negative += len(words & negative_terms)
+        sentiment_score = (positive - negative) / max(1, positive + negative)
+        news_adjustment = max(-0.0005, min(0.0005, sentiment_score * 0.0005))
+        adjusted_drift = daily_drift + news_adjustment
+        last_price = closes[-1]
+        expected = last_price * math.exp(adjusted_drift * horizon)
+        interval = 1.28155 * daily_volatility * math.sqrt(horizon)
+        lower = last_price * math.exp(adjusted_drift * horizon - interval)
+        upper = last_price * math.exp(adjusted_drift * horizon + interval)
+        momentum20 = closes[-1] / closes[-21] - 1
+        momentum60 = closes[-1] / closes[-min(61, len(closes))] - 1
+        expected_return = expected / last_price - 1
+        outlook = "Positive bias" if expected_return > 0.01 else "Negative bias" if expected_return < -0.01 else "Neutral / mixed"
+        coverage = min(1.0, len(closes) / 252)
+        confidence_score = round(0.35 + 0.40 * coverage + (0.10 if len(articles) >= 5 else 0.04 if articles else 0.0), 2)
+        source_list = [{
+            "title": article.get("title") or "Untitled article",
+            "publisher": (article.get("source") or {}).get("name") or "News index",
+            "published_at": article.get("publishedAt"),
+            "url": article.get("url"),
+        } for article in articles[:12] if article.get("url")]
+        return {
+            "symbol": resolved_symbol, "company": company,
+            "exchange": meta.get("fullExchangeName") or meta.get("exchangeName"),
+            "currency": meta.get("currency") or "USD", "provider": provider,
+            "generated_at": datetime.now(UTC).isoformat(), "horizon_trading_days": horizon,
+            "latest_close": last_price, "expected_price": expected, "expected_return": expected_return,
+            "scenarios": {"bear": lower, "base": expected, "bull": upper},
+            "range_level": "80% model interval (approximate, not a guarantee)",
+            "daily_volatility": daily_volatility, "annualized_volatility": daily_volatility * math.sqrt(252),
+            "momentum_20d": momentum20, "momentum_60d": momentum60, "outlook": outlook,
+            "confidence_score": confidence_score,
+            "confidence_note": "Data-coverage score, not the probability that the forecast will be correct.",
+            "news": {
+                "article_count": len(articles), "providers": news_data.get("providers", []),
+                "sentiment_score": sentiment_score, "positive_signal_terms": positive,
+                "negative_signal_terms": negative, "sources": source_list,
+                "coverage_note": news_data.get("coverage_note") or "News search may be incomplete.",
+                "error": news_error,
+            },
+            "method": "Explainable ensemble: weighted 20/60/252-session log-return drift, shrinkage toward zero, 60-session realized volatility and a capped headline-keyword adjustment.",
+            "limitations": [
+                "This is a statistical scenario model, not a guarantee or personalized investment advice.",
+                "Headline keyword sentiment is a weak proxy; headlines can be misleading, duplicated or context-dependent.",
+                "The interval assumes recent volatility is informative and does not model sudden gaps, corporate actions or all macro shocks.",
+                "Past prices and indexed news cannot reliably predict future returns.",
+            ],
+            "sources": [{
+                "name": f"{provider} daily price history", "url": price_source,
+                "observations": len(closes),
+                "last_observation_timestamp": (row.get("timestamp") or [None])[-1],
+            }, *[{"name": item["publisher"], "url": item["url"], "published_at": item["published_at"]} for item in source_list]],
+        }
+    except ProviderError as exc:
+        raise HTTPException(status_code=502, detail=f"Forecast unavailable: {exc}") from exc
 
 
 @app.get("/api/history")
