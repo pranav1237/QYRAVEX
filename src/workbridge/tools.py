@@ -251,6 +251,11 @@ class ToolRegistry:
             warnings.append("GDELT was unavailable; results were collected from other live news indexes.")
         if data.get("partial_errors"):
             warnings.append("Some news providers were unavailable: " + "; ".join(data["partial_errors"]))
+        if not articles:
+            warnings.append(
+                "No matching indexed headlines were returned. This is a news-coverage gap, "
+                "not evidence that the issuer has no recent news."
+            )
         if data.get("coverage_note"):
             warnings.append(data["coverage_note"])
         if data.get("cached"):
