@@ -480,24 +480,24 @@ class NewsProvider(HttpProvider):
                 found = self._finnhub_company_news(ticker, limit)["articles"]
                 articles.extend(found)
                 providers.append("Finnhub Company News")
-            except (ProviderError, ValueError, TypeError, KeyError, OverflowError) as exc:
-                errors.append(f"Finnhub Company News: {exc}")
+            except (ProviderError, httpx.HTTPError, ValueError, TypeError, KeyError, OverflowError) as exc:
+                errors.append(f"Finnhub Company News: {type(exc).__name__}: {exc}")
 
         if settings.alpha_vantage_api_key and ticker:
             try:
                 found = self._alpha_vantage_news(ticker, limit)["articles"]
                 articles.extend(found)
                 providers.append("Alpha Vantage News Sentiment")
-            except ProviderError as exc:
-                errors.append(f"Alpha Vantage News Sentiment: {exc}")
+            except (ProviderError, httpx.HTTPError, ValueError, TypeError, KeyError) as exc:
+                errors.append(f"Alpha Vantage News Sentiment: {type(exc).__name__}: {exc}")
 
         if settings.newsapi_api_key:
             try:
                 found = self._newsapi(" OR ".join(search_queries[:3]) or query, limit)["articles"]
                 articles.extend(found)
                 providers.append("NewsAPI")
-            except ProviderError as exc:
-                errors.append(f"NewsAPI: {exc}")
+            except (ProviderError, httpx.HTTPError, ValueError, TypeError, KeyError) as exc:
+                errors.append(f"NewsAPI: {type(exc).__name__}: {exc}")
 
         merged = self._deduplicate(articles, limit)
         if not merged and not errors:
