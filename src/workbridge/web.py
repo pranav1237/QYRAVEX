@@ -132,7 +132,7 @@ def market_chart(symbol: str, period: str = "1y") -> dict[str, Any]:
         refresh_optional_api_keys()
         if settings.finnhub_api_key:
             try:
-                quote_data = MarketProvider().quote(ticker)
+                quote_data = MarketProvider().quote(resolved_symbol)
                 if quote_data.get("c") is not None:
                     live_quote = {
                         "price": quote_data.get("c"),
