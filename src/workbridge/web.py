@@ -148,7 +148,7 @@ def market_chart(symbol: str, period: str = "1y") -> dict[str, Any]:
                 quote_note = "Finnhub did not return a live quote; using the market provider's latest quote when available."
         if live_quote is None and meta.get("regularMarketPrice") is not None:
             current_price = float(meta["regularMarketPrice"])
-            previous_close = float(meta.get("chartPreviousClose") or meta.get("previousClose") or points[-2]["close"])
+            previous_close = float(points[-2]["close"])
             live_quote = {
                 "price": current_price,
                 "change": current_price - previous_close,
