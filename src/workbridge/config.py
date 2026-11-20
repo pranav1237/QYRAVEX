@@ -9,6 +9,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Vercel's deployment filesystem is read-only. Its /tmp directory is writable
+# for the lifetime of a serverless instance; local development keeps ./data.
+_DEFAULT_DB_PATH = "/tmp/workbridge.sqlite" if os.getenv("VERCEL") == "1" else "./data/workbridge.sqlite"
+
 
 @dataclass(frozen=True)
 class Settings:
@@ -21,7 +25,7 @@ class Settings:
     openai_api_key: str | None = os.getenv("OPENAI_API_KEY") or None
     gemini_api_key: str | None = os.getenv("GEMINI_API_KEY") or None
     anthropic_api_key: str | None = os.getenv("ANTHROPIC_API_KEY") or None
-    db_path: Path = Path(os.getenv("WORKBRIDGE_DB", "./data/workbridge.sqlite"))
+    db_path: Path = Path(os.getenv("WORKBRIDGE_DB", _DEFAULT_DB_PATH))
     max_steps: int = int(os.getenv("WORKBRIDGE_MAX_STEPS", "12"))
     timeout_seconds: float = float(os.getenv("WORKBRIDGE_TIMEOUT_SECONDS", "20"))
     log_level: str = os.getenv("WORKBRIDGE_LOG_LEVEL", "INFO")
@@ -34,8 +38,8 @@ def refresh_optional_api_keys() -> None:
     """Refresh optional provider credentials after Codespaces injects secrets.
 
     Codespaces secrets added after a codespace was created may only appear in
-    the environment after it is restarted. Refreshing here also avoids keeping
-    stale empty values in the module-level Settings instance.
+    the environment after a codespace is restarted. Refreshing here also avoids
+    keeping stale empty values in the module-level Settings instance.
     """
     from os import getenv
 
