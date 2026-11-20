@@ -325,7 +325,7 @@ class AIResearchProvider:
                 response = httpx.post(
                     "https://api.openai.com/v1/chat/completions",
                     headers={"Authorization": f"Bearer {settings.openai_api_key}"},
-                    json={"model": "gpt-5.5",
+                    json={"model": "gpt-6.2-sol",
                           "messages": [{"role": "user", "content": prompt}]},
                     timeout=8.0,
                 )
