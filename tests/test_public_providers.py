@@ -275,7 +275,10 @@ def test_ai_research_provider_calls_all_configured_model_apis(monkeypatch):
         def json(self):
             return self.payload
 
+    captured_calls = []
+
     def fake_post(url, **kwargs):
+        captured_calls.append((url, kwargs))
         if "api.openai.com" in url:
             return FakeResponse({"choices": [{"message": {"content": "OpenAI review"}}]})
         if "generativelanguage.googleapis.com" in url:
@@ -289,6 +292,9 @@ def test_ai_research_provider_calls_all_configured_model_apis(monkeypatch):
     )
     assert result["successful_providers"] == ["OpenAI", "Google Gemini", "Anthropic Claude"]
     assert len(result["analyses"]) == 3
+    assert next(call for call in captured_calls if "api.openai.com" in call[0])[1]["json"]["model"] == "gpt-6.2-sol"
+    assert next(call for call in captured_calls if "generativelanguage.googleapis.com" in call[0])[0].endswith("gemini-3.8-flash:generateContent")
+    assert next(call for call in captured_calls if "api.anthropic.com" in call[0])[1]["json"]["model"] == "claude-haiku-5-5"
 
 def test_news_provider_uses_google_rss_when_gdelt_raises_raw_http_429(monkeypatch):
     import httpx
