@@ -131,6 +131,7 @@ def market_chart(symbol: str, period: str = "1y") -> dict[str, Any]:
         meta = row.get("meta", {})
         resolved_symbol = meta.get("symbol") or ticker
         live_quote = None
+        quote_note = None
         refresh_optional_api_keys()
         if settings.finnhub_api_key:
             try:
@@ -144,7 +145,17 @@ def market_chart(symbol: str, period: str = "1y") -> dict[str, Any]:
                         "provider": "Finnhub",
                     }
             except ProviderError:
-                live_quote = None
+                quote_note = "Finnhub did not return a live quote; using the market provider's latest quote when available."
+        if live_quote is None and meta.get("regularMarketPrice") is not None:
+            current_price = float(meta["regularMarketPrice"])
+            previous_close = float(meta.get("chartPreviousClose") or meta.get("previousClose") or points[-2]["close"])
+            live_quote = {
+                "price": current_price,
+                "change": current_price - previous_close,
+                "change_percent": ((current_price / previous_close) - 1) * 100 if previous_close else None,
+                "timestamp": meta.get("regularMarketTime"),
+                "provider": "Yahoo Finance market quote",
+            }
 
         data_provider = meta.get("dataProvider") or "Yahoo Finance"
         source_url = (
@@ -164,6 +175,7 @@ def market_chart(symbol: str, period: str = "1y") -> dict[str, Any]:
             "latest": points[-1],
             "previous": points[-2],
             "live_quote": live_quote,
+            "live_quote_note": quote_note,
         }
     except ProviderError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
