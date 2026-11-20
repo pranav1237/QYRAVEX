@@ -446,6 +446,7 @@ async function runResearch() {
       body:JSON.stringify({question,max_steps:Number($("#max-steps").value)})
     });
     renderReport(data);
+    saveResearchHistory(data);
     toast(data.report?.evidence?.length ? "Research run completed." : "Run completed with no source-backed evidence.");
     loadStatus();
   } catch (error) {
@@ -471,15 +472,58 @@ $("#copy-report").addEventListener("click", async () => {
   try { await navigator.clipboard.writeText(text); toast("Summary copied to clipboard."); }
   catch { toast("Clipboard access is unavailable in this browser."); }
 });
+const HISTORY_STORAGE_KEY = "qyravex.researchHistory.v1";
+function readLocalHistory() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+function saveResearchHistory(data) {
+  const report = data?.report || {};
+  const entry = {
+    question: report.question || "Untitled research",
+    summary: report.executive_summary || "No executive summary returned.",
+    created_at: new Date().toISOString(),
+    payload: data
+  };
+  try {
+    const previous = readLocalHistory();
+    const next = [entry, ...previous].slice(0, 30);
+    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(next));
+  } catch (error) {
+    console.warn("Could not persist QYRAVEX browser history:", error);
+    toast("Research completed, but browser storage is unavailable; this run may not appear in history.");
+  }
+}
 async function loadHistory() {
   const node = $("#history-list");
   node.innerHTML = '<div class="empty-state">Loading saved sessions…</div>';
+  let serverRuns = [];
   try {
     const data = await api("/api/history");
-    node.innerHTML = data.runs.length ? data.runs.map(run =>
-      `<div class="history-row"><div><strong>${escapeHtml(run.question)}</strong><p>${escapeHtml(run.summary)}</p></div><time>${escapeHtml(run.created_at)}</time></div>`
-    ).join("") : '<div class="empty-state">No saved research sessions yet. Run a query to create your first entry.</div>';
-  } catch (error) { node.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`; }
+    serverRuns = Array.isArray(data.runs) ? data.runs : [];
+  } catch (error) {
+    console.warn("Server-side history is unavailable; showing this browser's saved sessions.", error);
+  }
+  const localRuns = readLocalHistory();
+  const localRows = localRuns.map((run, index) =>
+    `<div class="history-row"><div><strong>${escapeHtml(run.question)}</strong><p>${escapeHtml(run.summary)}</p><button class="ghost-btn history-open" type="button" data-history-index="${index}">Open report ↗</button></div><time>${escapeHtml(new Date(run.created_at).toLocaleString())}</time></div>`
+  );
+  const localQuestions = new Set(localRuns.map(run => String(run.question || "").trim()));
+  const serverRows = serverRuns.filter(run => !localQuestions.has(String(run.question || "").trim())).map(run =>
+    `<div class="history-row"><div><strong>${escapeHtml(run.question)}</strong><p>${escapeHtml(run.summary)}</p><small class="muted">Saved on API instance</small></div><time>${escapeHtml(run.created_at)}</time></div>`
+  );
+  const rows = [...localRows, ...serverRows];
+  node.innerHTML = rows.length ? rows.join("") : '<div class="empty-state">No saved research sessions yet. Run a research query to create your first entry.</div>';
+  node.querySelectorAll("[data-history-index]").forEach(button => button.addEventListener("click", () => {
+    const saved = readLocalHistory()[Number(button.dataset.historyIndex)];
+    if (!saved?.payload) { toast("The saved report is no longer available in this browser."); return; }
+    renderReport(saved.payload);
+    showView("research");
+    window.scrollTo({top: document.querySelector("#results").offsetTop, behavior:"smooth"});
+    toast("Saved research report opened.");
+  }));
 }
 async function loadBenchmarks() {
   const list = $("#benchmark-list");
