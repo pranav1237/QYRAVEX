@@ -25,8 +25,8 @@ async function api(path, options = {}) {
 function showView(name) {
   const validViews = new Set(["research", "predictor", "history", "benchmarks"]);
   const viewName = validViews.has(name) ? name : "research";
-  $(".view").forEach(view => view.classList.toggle("active", view.id === `view-${viewName}`));
-  $(".nav-item").forEach(button => button.classList.toggle("active", button.dataset.view === viewName));
+  document.querySelectorAll(".view").forEach(view => view.classList.toggle("active", view.id === `view-${viewName}`));
+  document.querySelectorAll(".nav-item").forEach(button => button.classList.toggle("active", button.dataset.view === viewName));
   $("#crumb-current").textContent = ({research:"Research desk",predictor:"AI stock predictor",history:"Research history",benchmarks:"Benchmarks"})[viewName];
   if (viewName === "history") loadHistory();
   if (viewName === "benchmarks") loadBenchmarks();
@@ -279,6 +279,7 @@ async function loadMarketForecast(symbol, horizon = activeForecastHorizon) {
   try {
     const data = await api("/api/market/" + encodeURIComponent(symbol) + "/forecast?horizon=" + horizon);
     activeForecastData = data;
+    saveStockHistory(data);
     drawForecastChart(data);
     const currency = data.currency || "USD";
     const money = value => new Intl.NumberFormat(undefined, {style:"currency",currency,maximumFractionDigits:2}).format(value);
@@ -473,6 +474,33 @@ $("#copy-report").addEventListener("click", async () => {
   catch { toast("Clipboard access is unavailable in this browser."); }
 });
 const HISTORY_STORAGE_KEY = "qyravex.researchHistory.v1";
+const STOCK_HISTORY_STORAGE_KEY = "qyravex.stockHistory.v1";
+function readStockHistory() {
+  try {
+    const rows = JSON.parse(localStorage.getItem(STOCK_HISTORY_STORAGE_KEY) || "[]");
+    return Array.isArray(rows) ? rows : [];
+  } catch { return []; }
+}
+function saveStockHistory(data) {
+  if (!data?.symbol || !Number.isFinite(Number(data.latest_close))) return;
+  const entry = {
+    symbol: data.symbol, company: data.company || data.symbol,
+    currency: data.currency || "USD", latest_close: data.latest_close,
+    expected_price: data.expected_price, expected_return: data.expected_return,
+    horizon_trading_days: data.horizon_trading_days, outlook: data.outlook,
+    generated_at: data.generated_at || new Date().toISOString()
+  };
+  try {
+    const previous = readStockHistory();
+    const next = [entry, ...previous.filter(item =>
+      !(item.symbol === entry.symbol && item.horizon_trading_days === entry.horizon_trading_days)
+    )].slice(0, 50);
+    localStorage.setItem(STOCK_HISTORY_STORAGE_KEY, JSON.stringify(next));
+  } catch (error) {
+    console.warn("Could not persist QYRAVEX stock history:", error);
+    toast("Forecast loaded, but browser storage is unavailable; this search may not appear in history.");
+  }
+}
 function readLocalHistory() {
   try {
     const parsed = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY) || "[]");
@@ -507,6 +535,12 @@ async function loadHistory() {
     console.warn("Server-side history is unavailable; showing this browser's saved sessions.", error);
   }
   const localRuns = readLocalHistory();
+  const stockRuns = readStockHistory();
+  const stockRows = stockRuns.map((run, index) => {
+    const money = value => new Intl.NumberFormat(undefined, {style:"currency",currency:run.currency || "USD",maximumFractionDigits:2}).format(Number(value));
+    const pct = Number(run.expected_return) * 100;
+    return `<div class="history-row"><div><strong>${escapeHtml(run.company)} · ${escapeHtml(run.symbol)} <span class="source-pill">STOCK FORECAST</span></strong><p>Latest close ${escapeHtml(money(run.latest_close))} · ${escapeHtml(run.horizon_trading_days)} trading-day outlook ${escapeHtml(run.outlook)} · Expected scenario ${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%</p><button class="ghost-btn stock-history-open" type="button" data-stock-history-index="${index}">Open live predictor ↗</button></div><time>${escapeHtml(new Date(run.generated_at).toLocaleString())}</time></div>`;
+  });
   const localRows = localRuns.map((run, index) =>
     `<div class="history-row"><div><strong>${escapeHtml(run.question)}</strong><p>${escapeHtml(run.summary)}</p><button class="ghost-btn history-open" type="button" data-history-index="${index}">Open report ↗</button></div><time>${escapeHtml(new Date(run.created_at).toLocaleString())}</time></div>`
   );
@@ -514,8 +548,16 @@ async function loadHistory() {
   const serverRows = serverRuns.filter(run => !localQuestions.has(String(run.question || "").trim())).map(run =>
     `<div class="history-row"><div><strong>${escapeHtml(run.question)}</strong><p>${escapeHtml(run.summary)}</p><small class="muted">Saved on API instance</small></div><time>${escapeHtml(run.created_at)}</time></div>`
   );
-  const rows = [...localRows, ...serverRows];
+  const rows = [...stockRows, ...localRows, ...serverRows];
   node.innerHTML = rows.length ? rows.join("") : '<div class="empty-state">No saved research sessions yet. Run a research query to create your first entry.</div>';
+  node.querySelectorAll("[data-stock-history-index]").forEach(button => button.addEventListener("click", () => {
+    const saved = readStockHistory()[Number(button.dataset.stockHistoryIndex)];
+    if (!saved?.symbol) { toast("The saved stock search is no longer available."); return; }
+    showView("predictor");
+    $("#stock-symbol-input").value = saved.symbol;
+    loadMarketChart(saved.symbol, "1y", saved.symbol);
+    toast("Refreshing live market data for " + saved.symbol + ".");
+  }));
   node.querySelectorAll("[data-history-index]").forEach(button => button.addEventListener("click", () => {
     const saved = readLocalHistory()[Number(button.dataset.historyIndex)];
     if (!saved?.payload) { toast("The saved report is no longer available in this browser."); return; }
