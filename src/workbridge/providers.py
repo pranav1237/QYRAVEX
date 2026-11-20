@@ -294,6 +294,15 @@ class MacroProvider(HttpProvider):
         return {"observations": observations, "source": "FRED public graph CSV"}
 
 
+def _safe_ai_provider_error(provider: str, exc: Exception) -> str:
+    """Return a useful provider error without leaking credentials or request URLs."""
+    if isinstance(exc, httpx.HTTPStatusError):
+        return f"{provider}: HTTP {exc.response.status_code} (provider response details redacted)."
+    if isinstance(exc, httpx.TimeoutException):
+        return f"{provider}: request timed out."
+    return f"{provider}: {type(exc).__name__} (details redacted)."
+
+
 class AIResearchProvider:
     """Optional independent LLM reviewers; they interpret evidence, never invent market data."""
 
@@ -334,7 +343,7 @@ class AIResearchProvider:
                 if content:
                     results.append({"provider": "OpenAI", "analysis": str(content)})
             except (httpx.HTTPError, ValueError, KeyError, TypeError) as exc:
-                errors.append(f"OpenAI: {type(exc).__name__}: {exc}")
+                errors.append(_safe_ai_provider_error("OpenAI", exc))
         if settings.gemini_api_key:
             try:
                 response = httpx.post(
@@ -349,7 +358,7 @@ class AIResearchProvider:
                 if content:
                     results.append({"provider": "Google Gemini", "analysis": str(content)})
             except (httpx.HTTPError, ValueError, KeyError, TypeError, IndexError) as exc:
-                errors.append(f"Google Gemini: {type(exc).__name__}: {exc}")
+                errors.append(_safe_ai_provider_error("Google Gemini", exc))
         if settings.anthropic_api_key:
             try:
                 response = httpx.post(
@@ -365,7 +374,7 @@ class AIResearchProvider:
                 if content:
                     results.append({"provider": "Anthropic Claude", "analysis": str(content)})
             except (httpx.HTTPError, ValueError, KeyError, TypeError, IndexError) as exc:
-                errors.append(f"Anthropic Claude: {type(exc).__name__}: {exc}")
+                errors.append(_safe_ai_provider_error("Anthropic Claude", exc))
         return {
             "enabled_providers": [
                 name for name, key in (
